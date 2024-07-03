@@ -21,12 +21,37 @@
 
 . ./test_lib.sh
 
-test_setup "$BYSYSCALL_CMD"
-test_start "$0: verify pid match"
+test_setup true
+test_start "$0: verify pid match (baseline)"
 
-$BYSYSCALL_LD_PRELOAD ./getpid
+test_run_cmd_local "./getpid"
 
 test_pass
+
+COUNT=1000
+
+test_start "$0: verify $COUNT pid matches (baseline)"
+
+test_run_cmd_local "./getpid $COUNT"
+
+test_pass
+
+test_start "$0: verify pid match (test)"
+
+$BYSYSCALL_CMD &
+
+export $BYSYSCALL_LD_PRELOAD
+test_run_cmd_local "./getpid"
+
+test_pass
+
+test_start "$0: verify $COUNT pid matches (test)"
+
+test_run_cmd_local "./getpid $COUNT"
+
+test_pass
+
+
 test_cleanup
 
 test_exit

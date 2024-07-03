@@ -56,7 +56,7 @@ install: $(INSTALLFILES)
 $(TESTS): %:%.sh
 	TEST_ID=$$PPID  bash $<
 
-$(PROGS):
+$(PROGS): %:%.c
 	$(CC) $(CFLAGS) -o $@ $@.c
 
 

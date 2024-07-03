@@ -15,7 +15,7 @@ INSTALL ?= install
 
 CFLAGS = -fPIC -Wall -Wextra -march=native -g -std=c99
 
-LDLIBS := -ldl
+LDLIBS := -ldl -lbpf
 
 VMLINUX_BTF_PATH := /sys/kernel/btf/vmlinux
 
@@ -44,7 +44,6 @@ clean:
 install: $(PROG) $(LIB)
 	$(Q)$(INSTALL) -m 0755 -d $(DESTDIR)$(prefix)/sbin
 	$(Q)$(INSTALL) $(PROG) $(DESTDIR)$(prefix)/sbin
-	$(Q)$(INSTALL) $(LIB).so.$(VERSION) $(DESTDIR)$(prefix)/lib64
 	$(Q)$(INSTALL) $(LIB).so $(DESTDIR)$(prefix)/lib64
 
 $(PROG): $(PROG).o
@@ -57,13 +56,10 @@ VERSION = 0.1.0
 VERSION_SCRIPT  := libbysyscall.map
 
 $(LIB): $(LIB).c $(LIB).o $(PROG).skel.h
-	$(CC) $(CFLAGS) -fPIC -Wl,--version-script=$(VERSION_SCRIPT) \
-			-Wl,--soname,$(notdir $@).so.$(VERSION) \
-			-shared -o $(@).so.$(VERSION) \
+	$(Q)$(CC) $(CFLAGS) -fPIC \
+			-shared -o $(@).so \
 			$(patsubst %,%.o,$(@)) \
-			$(LDLIBS) $(LDFLAGS); \
-	rm -f $(@).so ; \
-	ln -sr $(@).so.$(VERSION) $(@).so
+			$(LDLIBS) $(LDFLAGS)
 
 %.skel.h: %.bpf.o
 	$(QUIET_GEN)$(BPFTOOL) gen skeleton $< > $@

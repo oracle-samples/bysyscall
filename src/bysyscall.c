@@ -1,9 +1,13 @@
+// SPDX-License-Identifier: GPL-2.0
+/* Copyright (c) 2024, Oracle and/or its affiliates. */
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <errno.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
+#include <signal.h>
 #include <unistd.h>
 
 #include "bysyscall.h"
@@ -12,8 +16,12 @@
 
 struct bysyscall_bpf *skel = NULL;
 
-static void cleanup(void)
+bool exiting = false;
+
+static void cleanup(int sig)
 {
+	if (sig)
+		exiting = true;
 	bysyscall_bpf__destroy(skel);
 	system("rm -fr " BYSYSCALL_PINDIR);
 }
@@ -22,10 +30,16 @@ int main(int argc, char *argv[])
 {
 	int map_dir_fd, err = 0;
 
-	cleanup();
+	cleanup(0);
 
-	if (argc > 1 && strcmp(argv[1], "stop") == 0)
+	signal(SIGINT, cleanup);
+
+	if (argc > 1 && strcmp(argv[1], "stop") == 0) {
+		cleanup(1);
 		return 0;
+	}
+
+	signal(SIGINT, cleanup);
 
 	skel = bysyscall_bpf__open_and_load();
 	if (!skel)
@@ -41,6 +55,12 @@ int main(int argc, char *argv[])
 			goto done;
 		}
 	}
+	err = bysyscall_bpf__attach(skel);
+	if (err) {
+		fprintf(stderr, "could not attack bysyscall progs: %d\n",
+			err);
+		goto done;
+	}
 	err = bpf_object__pin_maps(skel->obj, BYSYSCALL_PINDIR);
 	if (!err)
 		err = bpf_object__pin_programs(skel->obj, BYSYSCALL_PINDIR);
@@ -51,9 +71,11 @@ int main(int argc, char *argv[])
 	}
 	chmod(BYSYSCALL_PERTASK_DATA_PIN, 0755);
 
+	while (!exiting)
+		sleep(1);
 done:
 	if (err)
-		cleanup();
+		cleanup(1);
 	
 	return err;
 }

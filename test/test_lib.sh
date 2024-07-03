@@ -225,7 +225,7 @@ test_setup_local()
 		echo "skipping netns setup, $NETNS already present"
 	fi
 	set +e
-	$BYSYSCALL stop 2>/dev/null
+	$BYSYSCALL_PROG stop 2>/dev/null
 	# proxyt causes problems for tcp tests
 	if [[ -n "$PROXYT_SERVICE" ]]; then
 		service proxyt stop 2>/dev/null
@@ -260,7 +260,8 @@ test_cleanup_local()
 	fi
 
 	set +e
-	$BYSYSCALL stop 2>/dev/null
+	pkill -TERM bysyscall
+	$BYSYSCALL_PROG stop 2>/dev/null
 	ip --all netns del ${NETNS_PREFIX}\*
 	ip link del $VETH2 2>/dev/null
 	ip link del bpftunelocal 2>/dev/null

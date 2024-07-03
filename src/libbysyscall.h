@@ -2,7 +2,7 @@
 
 /* Add new bysyscalls here */
 #define __BYSYSCALL_MAPPER(FN)	\
-	FN(__getpid),
+	FN(getpid),
 
 #define __BYSYSCALL_ENUM_FN(x)	BYSYSCALL_ ## x
 enum bysyscall_id {

@@ -9,7 +9,11 @@
 #include <bpf/bpf_core_read.h>
 #include <bpf/usdt.bpf.h>
 
+#define printk	__bpf_printk
+
 struct bysyscall_pertask_data bysyscall_pertask_data[BYSYSCALL_PERTASK_DATA_CNT];
+
+long next_idx = -1;
 
 struct {
 	__uint(type, BPF_MAP_TYPE_TASK_STORAGE);
@@ -43,28 +47,42 @@ static __always_inline int do_bysyscall_init(struct task_struct *task, int *pert
 	int pid, ret;
 	int idx = 0;
 
+	printk("do_bysyscall_init task 0x%lx\n", task);
 	task = bpf_get_current_task_btf();
 	if (!task)
 		return 0;
 	pid = task->pid;
 
 	idxval = bpf_map_lookup_elem(&bysyscall_pertask_idx_hash, &pid);
-	if (!idxval || bysyscall_idx_in_use(idxval))
+	if (!idxval) {
+		struct bysyscall_idx_data d = {};
+
+		/* we will get hash misses until the index is full */
+		d.value = ++next_idx;
+
+		if (bpf_map_update_elem(&bysyscall_pertask_idx_hash, &pid, &d, BPF_ANY))
+			return 0;
+		idxval = bpf_map_lookup_elem(&bysyscall_pertask_idx_hash, &pid);
+	}
+	if (!idxval || bysyscall_idx_in_use(idxval)) {
+		printk("idx in use!\n");
 		return 0;
+	}
 	idxval->flags |= BYSYSCALL_IDX_IN_USE;
-	if (idxval)
-		idx = idxval->value & (BYSYSCALL_PERTASK_DATA_CNT - 1);
-	else
-		return 0;
-	idx = bysyscall_idx(idxval);
+	idx = idxval->value & (BYSYSCALL_PERTASK_DATA_CNT - 1);
+	printk("got idx %d\n", idx);
 	bysyscall_pertask_data[idx].pid = pid;
-	*ptr = idxval;
+	printk("set pid to %d\n", pid);
 	if (!pertask_idx)
 		pertask_idx = idxval->ptr;
 	if (pertask_idx) {
-		ret = bpf_probe_write_user(pertask_idx, ptr,sizeof(*pertask_idx));
-		if (!ret)
+		ret = bpf_probe_write_user(pertask_idx, &idx,sizeof(*pertask_idx));
+		if (ret) {
+			printk("bpf_probe_write_user (to 0x%lx) returned %d\n",
+			       pertask_idx, ret);
 			return 0;
+		}
+		printk("wrote idx %d to userspace!\n", idx);
 	}
 	newidxval = idxval;	
 	ptr = bpf_task_storage_get(&bysyscall_pertask, task, &idxval,
@@ -75,10 +93,12 @@ static __always_inline int do_bysyscall_init(struct task_struct *task, int *pert
 	return 0;
 }
 
-SEC("usdt//user/lib64/libbysyscall.so:bysyscall:init")
+SEC("usdt//usr/lib64/libbysyscall.so:bysyscall:init")
 int BPF_USDT(bysyscall_init, int *pertask_idx)
 {
 	struct task_struct *task = bpf_get_current_task_btf();
+
+	printk("bysyscall_init from USDT!\n");
 	if (!task)
 		return 0;
 
@@ -93,6 +113,7 @@ int BPF_PROG(bysyscall_task_newtask, struct task_struct *task, u64 clone_flags)
 
 	if (!current)
 		return 0;
+	__bpf_printk("in task_newtask...\n");
 	/* is the currrent (parent process) instrumented for bysyscall? */
 	idxval = bpf_task_storage_get(&bysyscall_pertask, current, &idxval, 0);
 	if (!idxval)
@@ -118,9 +139,10 @@ int do_bysyscall_fini(void)
 	return 0;
 }
 
-SEC("usdt//user/lib64/libbysyscall.so:bysyscall:fini")
+SEC("usdt//usr/lib64/libbysyscall.so:bysyscall:fini")
 int BPF_USDT(bysyscall_fini, int pertask_idx)
 {
+	__bpf_printk("bysyscall_fini!\n");
 	return do_bysyscall_fini();
 }
 
