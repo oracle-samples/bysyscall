@@ -15,7 +15,7 @@ struct bysyscall_bpf *skel = NULL;
 static void cleanup(void)
 {
 	bysyscall_bpf__destroy(skel);
-	unlink(BYSYSCALL_PINDIR);
+	system("rm -fr " BYSYSCALL_PINDIR);
 }
 
 int main(int argc, char *argv[])
@@ -23,6 +23,9 @@ int main(int argc, char *argv[])
 	int map_dir_fd, err = 0;
 
 	cleanup();
+
+	if (argc > 1 && strcmp(argv[1], "stop") == 0)
+		return 0;
 
 	skel = bysyscall_bpf__open_and_load();
 	if (!skel)

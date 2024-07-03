@@ -1,6 +1,6 @@
 LIBBYSYSCALL_0.1.0 {
 	global:
-		getpid;
+		__getpid;
 	local:
 		*;
 };
