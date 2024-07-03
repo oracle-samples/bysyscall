@@ -38,7 +38,7 @@ all: $(PROG) $(LIB)
 	
 clean:
 	$(call QUIET_CLEAN, $(PROG))
-	$(Q)$(RM) *.o *.so
+	$(Q)$(RM) *.o $(PROG) $(LIB).so
 	$(Q)$(RM) *.skel.h vmlinux.h
 
 install: $(PROG)
