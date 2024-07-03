@@ -1,6 +1,10 @@
 #ifndef __BYSYSCALL_H__
 #define __BYSYSCALL_H__
 
+#define BYSYSCALL_PINDIR		"/sys/fs/bpf/bysyscall/"
+#define BYSYSCALL_PERTASK_PIN		BYSYSCALL_PINDIR "pertask"
+#define BYSYSCALL_PERTASK_DATA_PIN	BYSYSCALL_PINDIR "bysyscal_bss"
+
 #define BYSYSCALL_PERTASK_DATA_CNT	8192
 
 struct bysyscall_pertask_data {
@@ -23,6 +27,7 @@ struct bysyscall_idx_data {
 
 #define BYSYSCALL_IDX_IN_USE		1
 #define bysyscall_idx_in_use(i)		(i->flags & BYSYSCALL_IDX_IN_USE)
-#define bysyscall_idx(i)		(i->value & (BYSYSCALL_PERTASK_DATA_CNT - 1))
+#define bysyscall_idx(i)		(i ? (i->value & (BYSYSCALL_PERTASK_DATA_CNT - 1)) : 0)
+#define bysyscall_idx_valid(i)	 	(i >= 0 && i < BYSYSCALL_PERTASK_DATA_CNT)
 
 #endif /* __BYSYSCALL_H__ */

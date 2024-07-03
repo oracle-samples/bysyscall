@@ -15,6 +15,8 @@ INSTALL ?= install
 
 CFLAGS := -g -Wall
 
+LDLIBS := -ldl
+
 VMLINUX_BTF_PATH := /sys/kernel/btf/vmlinux
 
 ifeq ($(V),1)
@@ -30,12 +32,13 @@ endif
 .PHONY: all clean $(PROG)
 
 PROG := bysyscall
+LIB := lib$(PROG)
 
-all: $(PROG)
+all: $(PROG) $(LIB)
 	
 clean:
 	$(call QUIET_CLEAN, $(PROG))
-	$(Q)$(RM) *.o
+	$(Q)$(RM) *.o *.so
 	$(Q)$(RM) *.skel.h vmlinux.h
 
 install: $(PROG)
@@ -47,6 +50,16 @@ $(PROG): $(PROG).o
 
 $(PROG).o: $(PROG).skel.h         \
 	   $(PROG).bpf.o
+
+VERSION = 0.1.0
+VERSION_SCRIPT  := libbpftune.map
+
+$(LIB).so: $(LIB).c $(LIB).o $(PROG).skel.h
+	$(CC) $(CFLAGS) -Wl,--version-script=$(VERSION_SCRIPT) \
+			-Wl,--soname,$(notdir $@).$(VERSION) \
+			-shared -o $(@).$(VERSION) \
+			$(patsubst %.so,%.o,$(@)) \
+			$(LDLIBS) $(LDFLAGS)
 
 %.skel.h: %.bpf.o
 	$(QUIET_GEN)$(BPFTOOL) gen skeleton $< > $@

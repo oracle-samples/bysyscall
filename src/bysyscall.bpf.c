@@ -36,12 +36,12 @@ struct {
  *
  * Now the user can use that index to look up the appropriate values.
  */
-int do_bysyscall_init(struct task_struct *task, int *pertask_idx)
+static __always_inline int do_bysyscall_init(struct task_struct *task, int *pertask_idx)
 {
-	struct bysyscall_idx_data *idxval;
+	struct bysyscall_idx_data *idxval = NULL, *newidxval;
 	struct bysyscall_idx_data **ptr;
 	int pid, ret;
-	int idx;
+	int idx = 0;
 
 	task = bpf_get_current_task_btf();
 	if (!task)
@@ -52,9 +52,9 @@ int do_bysyscall_init(struct task_struct *task, int *pertask_idx)
 	if (!idxval || bysyscall_idx_in_use(idxval))
 		return 0;
 	idxval->flags |= BYSYSCALL_IDX_IN_USE;
-	ptr = bpf_task_storage_get(&bysyscall_pertask, task, &idxval,
-				   BPF_LOCAL_STORAGE_GET_F_CREATE);
-	if (!ptr)
+	if (idxval)
+		idx = idxval->value & (BYSYSCALL_PERTASK_DATA_CNT - 1);
+	else
 		return 0;
 	idx = bysyscall_idx(idxval);
 	bysyscall_pertask_data[idx].pid = pid;
@@ -66,7 +66,12 @@ int do_bysyscall_init(struct task_struct *task, int *pertask_idx)
 		if (!ret)
 			return 0;
 	}
-
+	newidxval = idxval;	
+	ptr = bpf_task_storage_get(&bysyscall_pertask, task, &idxval,
+                                   BPF_LOCAL_STORAGE_GET_F_CREATE);
+        if (!ptr)
+                return 0;
+	*ptr = idxval;
 	return 0;
 }
 
@@ -84,7 +89,7 @@ SEC("tp_btf/task_newtask")
 int BPF_PROG(bysyscall_task_newtask, struct task_struct *task, u64 clone_flags)
 {
 	struct task_struct *current = bpf_get_current_task_btf();
-	struct bysyscall_idx_data *idxval;
+	struct bysyscall_idx_data *idxval = NULL;
 
 	if (!current)
 		return 0;
@@ -130,3 +135,5 @@ int BPF_PROG(bysyscall_process_exec)
 {
 	return do_bysyscall_fini();
 }
+
+char _license[] SEC("license") = "GPL v2";
