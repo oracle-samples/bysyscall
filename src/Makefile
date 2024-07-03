@@ -13,7 +13,7 @@ INCLUDES := -I. -I$(BPF_INCLUDE) -I../include/uapi
 
 INSTALL ?= install
 
-CFLAGS := -g -Wall
+CFLAGS = -fPIC -Wall -Wextra -march=native -g -std=c99
 
 LDLIBS := -ldl
 
@@ -41,9 +41,11 @@ clean:
 	$(Q)$(RM) *.o $(PROG) $(LIB).so
 	$(Q)$(RM) *.skel.h vmlinux.h
 
-install: $(PROG)
+install: $(PROG) $(LIB)
 	$(Q)$(INSTALL) -m 0755 -d $(DESTDIR)$(prefix)/sbin
 	$(Q)$(INSTALL) $(PROG) $(DESTDIR)$(prefix)/sbin
+	$(Q)$(INSTALL) $(LIB).so.$(VERSION) $(DESTDIR)$(prefix)/lib64
+	$(Q)$(INSTALL) $(LIB).so $(DESTDIR)$(prefix)/lib64
 
 $(PROG): $(PROG).o
 	$(QUIET_LINK)$(CC) $(CFLAGS) $^ -lbpf -o $@
@@ -52,14 +54,16 @@ $(PROG).o: $(PROG).skel.h         \
 	   $(PROG).bpf.o
 
 VERSION = 0.1.0
-VERSION_SCRIPT  := libbpftune.map
+VERSION_SCRIPT  := libbysyscall.map
 
-$(LIB).so: $(LIB).c $(LIB).o $(PROG).skel.h
-	$(CC) $(CFLAGS) -Wl,--version-script=$(VERSION_SCRIPT) \
-			-Wl,--soname,$(notdir $@).$(VERSION) \
-			-shared -o $(@).$(VERSION) \
-			$(patsubst %.so,%.o,$(@)) \
-			$(LDLIBS) $(LDFLAGS)
+$(LIB): $(LIB).c $(LIB).o $(PROG).skel.h
+	$(CC) $(CFLAGS) -fPIC -Wl,--version-script=$(VERSION_SCRIPT) \
+			-Wl,--soname,$(notdir $@).so.$(VERSION) \
+			-shared -o $(@).so.$(VERSION) \
+			$(patsubst %,%.o,$(@)) \
+			$(LDLIBS) $(LDFLAGS); \
+	rm -f $(@).so ; \
+	ln -sr $(@).so.$(VERSION) $(@).so
 
 %.skel.h: %.bpf.o
 	$(QUIET_GEN)$(BPFTOOL) gen skeleton $< > $@

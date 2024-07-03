@@ -2,3 +2,4 @@
 *.skel.h
 vmlinux.h
 bysyscall
+libbysyscall.so*
