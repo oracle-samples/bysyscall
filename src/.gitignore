@@ -1,0 +1,4 @@
+*.o
+*.skel.h
+vmlinux.h
+bysyscall
