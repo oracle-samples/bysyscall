@@ -1,0 +1,13 @@
+[Unit]
+Description=BPF-based system call bypass
+After=local-fs.target
+
+[Service]
+Type=oneshot
+ExecStartPre=/usr/bin/chmod 777 /sys/fs/bpf
+ExecStart=/usr/sbin/bysyscall
+ExecStop=/usr/bin/rm -fr /sys/fs/bpf/bysyscall
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target

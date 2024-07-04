@@ -11,6 +11,12 @@ BPFTOOL ?= bpftool
 BPF_INCLUDE := /usr/local/include
 INCLUDES := -I. -I$(BPF_INCLUDE) -I../include/uapi
 
+DESTDIR ?= /
+prefix ?= /usr
+installprefix = $(DESTDIR)/$(prefix)
+
+INSTALLPATH = $(installprefix)
+
 INSTALL ?= install
 
 CFLAGS = -fPIC -Wall -Wextra -march=native -g -std=c99
@@ -41,10 +47,12 @@ clean:
 	$(Q)$(RM) *.o $(PROG) $(LIB).so
 	$(Q)$(RM) *.skel.h vmlinux.h
 
-install: $(PROG) $(LIB)
-	$(Q)$(INSTALL) -m 0755 -d $(DESTDIR)$(prefix)/sbin
-	$(Q)$(INSTALL) $(PROG) $(DESTDIR)$(prefix)/sbin
-	$(Q)$(INSTALL) $(LIB).so $(DESTDIR)$(prefix)/lib64
+install: $(PROG) $(LIB) bysyscall.service
+	$(Q)$(INSTALL) -m 0755 -d $(installprefix)/sbin
+	$(Q)$(INSTALL) $(PROG) $(installprefix)/sbin
+	$(Q)$(INSTALL) $(LIB).so $(installprefix)/lib64
+	$(Q)$(INSTALL) -m 0755 -d $(installprefix)/lib/systemd/system
+	$(Q)$(INSTALL) -m 644 bysyscall.service $(installprefix)/lib/systemd/system
 
 $(PROG): $(PROG).o
 	$(QUIET_LINK)$(CC) $(CFLAGS) $^ -lbpf -o $@
@@ -64,7 +72,7 @@ $(LIB): $(LIB).c $(LIB).o $(PROG).skel.h
 %.skel.h: %.bpf.o
 	$(QUIET_GEN)$(BPFTOOL) gen skeleton $< > $@
 
-$(PROG).bpf.o: vmlinux.h
+$(PROG).bpf.o: $(PROG).bpf.c vmlinux.h
 	$(QUIET_GEN)$(CLANG) -g -D__TARGET_ARCH_$(SRCARCH) -O2 -target bpf \
 		$(INCLUDES) -c $(PROG).bpf.c -o $@ &&                   \
 	$(LLVM_STRIP) -g $@

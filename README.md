@@ -74,18 +74,19 @@ sys	0m0.667s
 So this takes ~1 second.  Now with bysyscall, and our LD_PRELOAD library:
 
 ```
-$ bysyscall # loads/attaches syscall bypass progs and pins them to
-	    # /sys/fs/bpf/bysyscall , then exits.
+$ sudo service bysyscall start
+# loads/attaches syscall bypass progs and pins them to
+# /sys/fs/bpf/bysyscall , then exits.
 $ time LD_PRELOAD=/usr/lib64/libbysyscall.so ./getpid 10000000
 10000000 pid from getpid() (423444) matches pid from syscall (423444)
 
 real	0m0.083s
 user	0m0.082s
 sys	0m0.001s
-$ 
+
 ```
 
-Less than 1/10 of a second this time.
+It took less than 1/10 of a second this time.
 
 [1] https://bugzilla.redhat.com/show_bug.cgi?id=1443976
 [2] https://bugzilla.redhat.com/show_bug.cgi?id=1469670
