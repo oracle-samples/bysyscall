@@ -42,6 +42,10 @@ void bysyscall_log(int level, const char *fmt, ...)
 	}
 }
 
+__attribute__((noinline)) void __bysyscall_init(__attribute__((unused))volatile int *pertask_data_idx)
+{
+}
+
 void __attribute__ ((constructor)) bysyscall_init(void)
 {
 	const char *libc, *debug;
@@ -70,14 +74,14 @@ void __attribute__ ((constructor)) bysyscall_init(void)
 		}
 	}
 
-	/* This tracepoint triggers a bysyscall USDT program to run;
+	/* This call triggers a bysyscall uprobe program to run;
 	 * this alerts bysyscall that we need to record info about this
 	 * task and its children.
 	 *
 	 * The associated BPF program writes to bysyscall_pertask_data_idx
 	 * to tell us the index of the per-task data.
 	 */
-	DTRACE_PROBE1(bysyscall, init, &bysyscall_pertask_data_idx);
+	__bysyscall_init(&bysyscall_pertask_data_idx);
 
 	bysyscall_pertask_fd = bpf_obj_get(BYSYSCALL_PERTASK_DATA_PIN);
 	if (bysyscall_pertask_fd >= 0) {
@@ -97,9 +101,13 @@ void __attribute__ ((constructor)) bysyscall_init(void)
 	}
 }
 
+__attribute__((noinline)) void __bysyscall_fini(__attribute__((unused))volatile int pertask_data_idx)
+{
+}
+
 void __attribute__ ((destructor)) bysyscall_fini(void)
 {
-	DTRACE_PROBE1(bysyscall, fini, bysyscall_pertask_data_idx);
+	__bysyscall_fini(bysyscall_pertask_data_idx);
 	if (dlh)
 		dlclose(dlh);
 }

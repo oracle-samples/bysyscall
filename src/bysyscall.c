@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <errno.h>
+#include <sys/param.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
@@ -29,6 +30,8 @@ static void cleanup(int sig)
 int main(int argc, char *argv[])
 {
 	int map_dir_fd, err = 0;
+	struct bpf_link **links;
+	unsigned int i;
 
 	cleanup(0);
 
@@ -69,10 +72,21 @@ int main(int argc, char *argv[])
 			BYSYSCALL_PINDIR, strerror(errno));
 		err = 1;
 	}
+	links = (struct bpf_link **)&skel->links;
+	for (i = 0; i < sizeof(skel->links)/sizeof(struct bpf_link *); i++) {
+		char linkname[PATH_MAX];
+
+		snprintf(linkname, sizeof(linkname), BYSYSCALL_PINDIR "link%d", i);
+		err = bpf_link__pin(links[i], linkname);
+		if (err) {
+			fprintf(stderr, "could not pin bysyscall link to '%s': %s\n",
+				linkname, strerror(errno));
+			err = 1;
+			goto done;
+		}
+	}
 	chmod(BYSYSCALL_PERTASK_DATA_PIN, 0755);
 
-	while (!exiting)
-		sleep(1);
 done:
 	if (err)
 		cleanup(1);

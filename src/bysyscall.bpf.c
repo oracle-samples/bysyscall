@@ -93,12 +93,12 @@ static __always_inline int do_bysyscall_init(struct task_struct *task, int *pert
 	return 0;
 }
 
-SEC("usdt//usr/lib64/libbysyscall.so:bysyscall:init")
-int BPF_USDT(bysyscall_init, int *pertask_idx)
+SEC("uprobe//usr/lib64/libbysyscall.so:__bysyscall_init")
+int BPF_UPROBE(bysyscall_init, int *pertask_idx)
 {
 	struct task_struct *task = bpf_get_current_task_btf();
 
-	printk("bysyscall_init from USDT!\n");
+	printk("bysyscall_init from uprobe!\n");
 	if (!task)
 		return 0;
 
@@ -121,7 +121,7 @@ int BPF_PROG(bysyscall_task_newtask, struct task_struct *task, u64 clone_flags)
 	return do_bysyscall_init(task, idxval->ptr);
 }
 
-int do_bysyscall_fini(void)
+static __always_inline int do_bysyscall_fini(void)
 {
 	struct task_struct *task;
 	struct bysyscall_idx_data *idxval;
@@ -139,8 +139,8 @@ int do_bysyscall_fini(void)
 	return 0;
 }
 
-SEC("usdt//usr/lib64/libbysyscall.so:bysyscall:fini")
-int BPF_USDT(bysyscall_fini, int pertask_idx)
+SEC("uprobe//usr/lib64/libbysyscall.so:__bysyscall_fini")
+int BPF_UPROBE(bysyscall_fini, int pertask_idx)
 {
 	__bpf_printk("bysyscall_fini!\n");
 	return do_bysyscall_fini();
