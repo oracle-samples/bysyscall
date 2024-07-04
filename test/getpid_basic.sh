@@ -38,7 +38,7 @@ test_pass
 
 test_start "$0: verify pid match (test)"
 
-$BYSYSCALL_CMD &
+test_run_cmd_local $BYSYSCALL_CMD
 
 export $BYSYSCALL_LD_PRELOAD
 test_run_cmd_local "./getpid"

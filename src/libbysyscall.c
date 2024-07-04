@@ -18,7 +18,6 @@
 #include <bpf/bpf.h>
 
 #include "libbysyscall.h"
-#include "sdt.h"
 
 int bysyscall_pertask_fd = -1;
 volatile int bysyscall_pertask_data_idx = -1;
