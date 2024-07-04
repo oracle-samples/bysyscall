@@ -32,7 +32,7 @@ COUNT=1000
 
 test_start "$0: verify $COUNT pid matches (baseline)"
 
-test_run_cmd_local "./getpid $COUNT"
+test_run_cmd_local "time ./getpid $COUNT"
 
 test_pass
 
@@ -47,7 +47,7 @@ test_pass
 
 test_start "$0: verify $COUNT pid matches (test)"
 
-test_run_cmd_local "./getpid $COUNT"
+test_run_cmd_local "time ./getpid $COUNT"
 
 test_pass
 

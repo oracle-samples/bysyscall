@@ -51,7 +51,7 @@ static __always_inline int do_bysyscall_init(struct task_struct *task, int *pert
 	task = bpf_get_current_task_btf();
 	if (!task)
 		return 0;
-	pid = task->pid;
+	pid = task->tgid;
 
 	idxval = bpf_map_lookup_elem(&bysyscall_pertask_idx_hash, &pid);
 	if (!idxval) {

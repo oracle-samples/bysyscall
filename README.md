@@ -50,5 +50,35 @@ Per-task bysyscall wrappers are provided for
 - getuid()
 - geteuid()
 
+# Example usage
+
+`getpid` is a simple program that calls getpid the specified number of times,
+then compares the result to the raw syscall to ensure it was right each time.
+
+Running this with baseline (no bysyscall in the picture for 10000000 calls to
+`getpid()` we see:
+
+```
+$ time ./getpid 10000000
+10000000 pid from getpid() (423483) matches pid from syscall (423483)
+
+real	0m0.989s
+user	0m0.321s
+sys	0m0.667s
+```
+
+So this takes ~1 second.  Now with bysyscall, and our LD_PRELOAD library:
+
+```
+$ bysyscall & # loads/attaches syscall bypass progs
+$ time LD_PRELOAD=/usr/lib64/libbysyscall.so ./getpid 10000000
+10000000 pid from getpid() (423444) matches pid from syscall (423444)
+
+real	0m0.083s
+user	0m0.082s
+sys	0m0.001s
+$ 
+```
+
 [1] https://bugzilla.redhat.com/show_bug.cgi?id=1443976
 [2] https://bugzilla.redhat.com/show_bug.cgi?id=1469670
