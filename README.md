@@ -70,7 +70,8 @@ sys	0m0.667s
 So this takes ~1 second.  Now with bysyscall, and our LD_PRELOAD library:
 
 ```
-$ bysyscall & # loads/attaches syscall bypass progs
+$ bysyscall # loads/attaches syscall bypass progs and pins them to
+	    # /sys/fs/bpf/bysyscall , then exits.
 $ time LD_PRELOAD=/usr/lib64/libbysyscall.so ./getpid 10000000
 10000000 pid from getpid() (423444) matches pid from syscall (423444)
 
