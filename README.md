@@ -8,7 +8,8 @@ one instructive example is `getpid()`.
 
 `getpid()` support is complex because the value must be right but a cached
 value can be invalidated by events such as `fork()`ing a new process,
-creating a new thread via pthread_create() or entering a pid namespace.
+or entering a pid namespace.
+
 As a result support for `getpid()` was removed from vDSO [1], but it is
 wanted - see [2].
 
@@ -29,26 +30,29 @@ With this approach in mind, we can createan LD_PRELOAD library with its
 functions which consult these memory-mapped values, falling back to the
 libc functions if this fails.
 
-- a daemon (bysyscalld) is responsible for launching BPF programs to handle
-populating values and updating them in response to events
+- a user-space program (bysyscall) is responsible for launching BPF programs
+to help populate cache values and update them in response to events
 
 # bysyscall usage
 
 To use bysyscall it will then be a matter of using the LD_PRELOAD approach
 to launch your program e.g.
 
-LD_PRELOAD=/usr/lib64/libbsyscall.so myprogram
+```
+$ LD_PRELOAD=/usr/lib64/libbsyscall.so myprogram
+```
 
-When a program is launched this way, libybsyscall's functions
+When a program is launched this way, libybsyscall's replacement libc
+wrapper functions will be run, avoiding system calls where possible.
 
 # Supported libc syscall wrapper functions
 
 Per-task bysyscall wrappers are provided for
 
 - getpid()
-- getppid()
-- getuid()
-- geteuid()
+- getppid() (to do)
+- getuid() (to do)
+- geteuid() (to do)
 
 # Example usage
 
@@ -80,6 +84,8 @@ user	0m0.082s
 sys	0m0.001s
 $ 
 ```
+
+Less than 1/10 of a second this time.
 
 [1] https://bugzilla.redhat.com/show_bug.cgi?id=1443976
 [2] https://bugzilla.redhat.com/show_bug.cgi?id=1469670
