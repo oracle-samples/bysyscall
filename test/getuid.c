@@ -51,9 +51,9 @@ int main(int argc, char *argv[])
 		fprintf(stderr, "uid from getuid() (%d) != uid from syscall (%d)\n",
 			uid1, uid2);
 
-		exit(1);
+		return 1;
 	}
 	printf("%d uid from getuid() (%d) matches uid from syscall (%d)\n",
 	       count, uid1, uid2);
-	exit(0);
+	return 0;
 }

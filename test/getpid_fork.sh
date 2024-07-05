@@ -24,7 +24,7 @@
 test_setup true
 test_start "$0: verify pid match after fork (baseline)"
 
-test_run_cmd_local "./getpid 1 fork"
+./getpid 1 fork
 
 test_pass
 
@@ -32,7 +32,7 @@ COUNT=1000
 
 test_start "$0: verify $COUNT pid matches after fork (baseline)"
 
-test_run_cmd_local "time ./getpid $COUNT fork"
+time ./getpid $COUNT fork
 
 test_pass
 
@@ -41,16 +41,15 @@ test_start "$0: verify pid match after fork (test)"
 test_run_cmd_local $BYSYSCALL_CMD
 
 export $BYSYSCALL_LD_PRELOAD
-test_run_cmd_local "./getpid 1 fork"
+./getpid 1 fork
 
 test_pass
 
 test_start "$0: verify $COUNT pid matches after fork (test)"
 
-test_run_cmd_local "time ./getpid $COUNT fork"
+time ./getpid $COUNT fork
 
 test_pass
-
 
 test_cleanup
 

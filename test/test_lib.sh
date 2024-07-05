@@ -191,7 +191,6 @@ test_setup_local()
 	CMD=$1
 	TIMEOUT=$2
 
-	set +e
 	# test_setup_local() can be called multiple times for a test...
 	set +e
 	ip netns list 2>/dev/null | grep $NETNS

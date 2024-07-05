@@ -24,7 +24,7 @@
 test_setup true
 test_start "$0: verify pid match (baseline)"
 
-test_run_cmd_local "./getpid"
+./getpid
 
 test_pass
 
@@ -32,7 +32,7 @@ COUNT=1000
 
 test_start "$0: verify $COUNT pid matches (baseline)"
 
-test_run_cmd_local "time ./getpid $COUNT"
+time ./getpid $COUNT
 
 test_pass
 
@@ -41,13 +41,13 @@ test_start "$0: verify pid match (test)"
 test_run_cmd_local $BYSYSCALL_CMD
 
 export $BYSYSCALL_LD_PRELOAD
-test_run_cmd_local "./getpid"
+./getpid
 
 test_pass
 
 test_start "$0: verify $COUNT pid matches (test)"
 
-test_run_cmd_local "time ./getpid $COUNT"
+time ./getpid $COUNT
 
 test_pass
 

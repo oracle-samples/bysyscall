@@ -50,9 +50,9 @@ int main(int argc, char *argv[])
 		fprintf(stderr, "pid from getpid() (%d) != pid from syscall (%d)\n",
 			pid1, pid2);
 
-		exit(1);
+		return 1;
 	}
 	printf("%d pid from getpid() (%d) matches pid from syscall (%d)\n",
 	       count, pid1, pid2);
-	exit(0);
+	return 0;
 }

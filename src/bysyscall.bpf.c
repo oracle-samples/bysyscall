@@ -36,12 +36,10 @@ struct {
 static __always_inline int do_bysyscall_init(struct task_struct *task, int *pertask_idx)
 {
 	struct bysyscall_idx_data *idxval = NULL, *newidxval;
-	struct bysyscall_idx_data **ptr;
 	__u64 uid_gid = 0;
 	int pid, ret;
 	int idx = 0;
 
-	task = bpf_get_current_task_btf();
 	if (!task)
 		return 0;
 	pid = task->pid;
@@ -66,16 +64,15 @@ static __always_inline int do_bysyscall_init(struct task_struct *task, int *pert
 	uid_gid = bpf_get_current_uid_gid();
 	bysyscall_pertask_data[idx].gid = uid_gid >> 32;
 	bysyscall_pertask_data[idx].uid = uid_gid & 0xffffffff;
-	if (!pertask_idx)
-		pertask_idx = idxval->ptr;
-	if (pertask_idx) {
-		ret = bpf_probe_write_user(pertask_idx, &idx,sizeof(*pertask_idx));
+	if (pertask_idx)
+		idxval->ptr = pertask_idx;
+	if (idxval->ptr) {
+		ret = bpf_probe_write_user(idxval->ptr, &idx,sizeof(*pertask_idx));
 		if (ret) {
 			printk("bpf_probe_write_user (to 0x%lx) returned %d\n",
 			       pertask_idx, ret);
 			return 0;
 		}
-		printk("wrote idx %d to userspace!\n", idx);
 	}
 	newidxval = idxval;	
 	return 0;
@@ -86,7 +83,6 @@ int BPF_UPROBE(bysyscall_init, int *pertask_idx)
 {
 	struct task_struct *task = bpf_get_current_task_btf();
 
-	printk("bysyscall_init from uprobe!\n");
 	if (!task)
 		return 0;
 
@@ -113,7 +109,6 @@ static __always_inline int do_bysyscall_fini(void)
 SEC("uprobe//usr/lib64/libbysyscall.so:__bysyscall_fini")
 int BPF_UPROBE(bysyscall_fini, int pertask_idx)
 {
-	__bpf_printk("bysyscall_fini!\n");
 	return do_bysyscall_fini();
 }
 
