@@ -40,6 +40,30 @@ from the BPF side.  These are then pinned and the program exits. As a
 result there is nothing running in userspace aside from the `LD_PRELOAD`ed
 library to support syscall bypass.
 
+On the BPF side, a hash map is used to map from a pid to an index in
+the memory-mapped array of per-task data.  When the user loads the
+libbysyscall library, the init function finds and `mmap()`s the pinned
+array map of per-task data.  It then calls `__bysyscall_init()` with
+a pointer to a per-thread integer index into the array map.
+
+The BPF program instrumenting that function calls bpf_probe_write()
+to write the relevant index and from then on callers of system call
+wrappers can use that index to retrieve per-task data from the
+memory-mapped array.
+
+# Why is this needed?
+
+With the approach of using an LD_PRELOAD library, a reasonable question
+is why use BPF at all? We could just cache the relevant values like
+pid, uid etc.
+
+This is where BPF comes in - by attaching BPF programs to the
+right places, we can update our cached values when things change
+(e.g. a setuid() call changing the uid).
+
+In addition some system calls like getrusage() are not amenable to
+caching as their values keep changing.
+
 # bysyscall usage
 
 To use bysyscall it will then be a matter of using the LD_PRELOAD approach

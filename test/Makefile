@@ -18,13 +18,16 @@
 #
 
 DEFAULT_TESTS = getpid_basic \
-		getpid_fork
+	 	getpid_fork \
+		getuid_basic \
+		getuid_fork
 
 TESTS = $(DEFAULT_TESTS)
 
 LIBS = test_lib.sh
 
-PROGS = getpid
+PROGS = getpid \
+	getuid
 
 INSTALLFILES = $(DEFAULT_TESTS:%=%.sh) $(LIBS)
 
