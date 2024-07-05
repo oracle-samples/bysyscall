@@ -4,7 +4,8 @@
 #define __BYSYSCALL_MAPPER(FN)	\
 	FN(getpid),		\
 	FN(getuid),		\
-	FN(getgid),
+	FN(getgid),		\
+	FN(fork),
 
 
 #define __BYSYSCALL_ENUM_FN(x)	BYSYSCALL_ ## x

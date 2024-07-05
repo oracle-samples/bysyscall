@@ -1,6 +1,8 @@
+#!/usr/bin/bash
+#
 # SPDX-License-Identifier: GPL-2.0 WITH Linux-syscall-note
 #
-# Copyright (c) 2023, Oracle and/or its affiliates.
+# Copyright (c) 2024, Oracle and/or its affiliates.
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public
@@ -17,48 +19,39 @@
 # Boston, MA 021110-1307, USA.
 #
 
-DEFAULT_TESTS = getpid_basic \
-		getpid_fork
+. ./test_lib.sh
 
-TESTS = $(DEFAULT_TESTS)
+test_setup true
+test_start "$0: verify pid match after fork (baseline)"
 
-LIBS = test_lib.sh
+test_run_cmd_local "./getpid 1 fork"
 
-PROGS = getpid
+test_pass
 
-INSTALLFILES = $(DEFAULT_TESTS:%=%.sh) $(LIBS)
+COUNT=1000
 
-DESTDIR ?=
-prefix ?= /usr
-installprefix ?= $(DESTDIR)/$(prefix)
+test_start "$0: verify $COUNT pid matches after fork (baseline)"
 
-INSTALLPATH = $(installprefix)/lib/tcptune_test/
+test_run_cmd_local "time ./getpid $COUNT fork"
 
-install_sh_PROGRAM = install
-install_sh_DIR = install -dv
+test_pass
 
-all: $(PROGS)
-	
-PHONY: clean
-	
-clean:
-	rm -f $(PROGS)
+test_start "$0: verify pid match after fork (test)"
 
-test: $(TESTS)
-	
-test_perf: $(PERF_TESTS)
+test_run_cmd_local $BYSYSCALL_CMD
 
-test_tuner: $(TUNER_TESTS)
-	
-install: $(INSTALLFILES)
-	$(install_sh_DIR) -d $(INSTALLPATH) ; \
-	$(install_sh_PROGRAM) $^ -t $(INSTALLPATH) ; \
+export $BYSYSCALL_LD_PRELOAD
+test_run_cmd_local "./getpid 1 fork"
 
-$(TESTS): %:%.sh
-	TEST_ID=$$PPID  bash $<
+test_pass
 
-$(PROGS): %:%.c
-	$(CC) $(CFLAGS) -o $@ $@.c
+test_start "$0: verify $COUNT pid matches after fork (test)"
+
+test_run_cmd_local "time ./getpid $COUNT fork"
+
+test_pass
 
 
-PHONY: clean
+test_cleanup
+
+test_exit

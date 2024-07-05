@@ -84,22 +84,26 @@ void __attribute__ ((constructor)) bysyscall_init(void)
 	__bysyscall_init(&bysyscall_pertask_data_idx);
 
 	bysyscall_pertask_fd = bpf_obj_get(BYSYSCALL_PERTASK_DATA_PIN);
-	if (bysyscall_pertask_fd >= 0) {
-		bysyscall_pertask_data = mmap(NULL,
-					      sizeof (*bysyscall_pertask_data) *
-					      BYSYSCALL_PERTASK_DATA_CNT,
-					      PROT_READ,
-					      MAP_SHARED,
-					      bysyscall_pertask_fd,
-					      0);
-		if (bysyscall_pertask_data == MAP_FAILED) {
-			bysyscall_log(LOG_ERR, "could not mmap() pertask data from '%s': %s\n",
-				      BYSYSCALL_PERTASK_DATA_PIN,
-				      strerror(errno));
-			bysyscall_pertask_data = NULL;
-			close(bysyscall_pertask_fd);
-			bysyscall_pertask_fd = -1;
-		}
+	if (bysyscall_pertask_fd < 0) {
+		bysyscall_log(LOG_DEBUG, "could not get '%s': %s\n",
+			      BYSYSCALL_PERTASK_DATA_PIN, strerror(errno));
+		return;
+	}
+
+	bysyscall_pertask_data = mmap(NULL,
+				      sizeof (*bysyscall_pertask_data) *
+				      BYSYSCALL_PERTASK_DATA_CNT,
+				      PROT_READ,
+				      MAP_SHARED,
+				      bysyscall_pertask_fd,
+				      0);
+	if (bysyscall_pertask_data == MAP_FAILED) {
+		bysyscall_log(LOG_ERR, "could not mmap() pertask data from '%s': %s\n",
+			      BYSYSCALL_PERTASK_DATA_PIN,
+			      strerror(errno));
+		bysyscall_pertask_data = NULL;
+		close(bysyscall_pertask_fd);
+		bysyscall_pertask_fd = -1;
 	}
 }
 
@@ -112,16 +116,26 @@ static void bysyscall_stat(void)
 	unsigned int i;
 
 	for (i = 0; i < BYSYSCALL_CNT; i++) {
-		bysyscall_log(LOG_INFO, "%s: bypassed %ld times\n",
-			      bysyscall_names[i], bysyscall_stats[i]);
+		if (bysyscall_stats[i])
+			bysyscall_log(LOG_INFO, "%s: bypassed %ld times\n",
+				      bysyscall_names[i], bysyscall_stats[i]);
 	}
 }
      
 void __attribute__ ((destructor)) bysyscall_fini(void)
 {
 	__bysyscall_fini(bysyscall_pertask_data_idx);
-	if (bysyscall_loglevel >= LOG_INFO)
-		bysyscall_stat();
+	bysyscall_stat();
+}
+
+pid_t fork(void)
+{
+	pid_t ret = ((pid_t (*)())bysyscall_real_fns[BYSYSCALL_fork])();
+
+	/* in child, init pertask idx */
+	if (ret == 0)
+		__bysyscall_init(&bysyscall_pertask_data_idx);
+	return ret;
 }
 
 static inline bool have_bysyscall_pertask_data(void)
@@ -136,7 +150,7 @@ pid_t getpid(void)
 		bysyscall_stats[BYSYSCALL_getpid]++;
 		return bysyscall_pertask_data[bysyscall_pertask_data_idx].pid;
 	}
-	return ((pid_t (*)())(bysyscall_real_fns[BYSYSCALL_getpid]))();
+	return ((pid_t (*)())bysyscall_real_fns[BYSYSCALL_getpid])();
 }
 
 uid_t getuid(void)
