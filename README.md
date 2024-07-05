@@ -24,35 +24,44 @@ a pid namespace and update cache values in response to such events.
 
 # bysyscall design
 
-With this approach in mind, we can createan LD_PRELOAD library with its
+With this approach in mind, we can create
 
 - an LD_PRELOAD libbysyscall shared library with its own versions of libc
 functions which consult these memory-mapped values, falling back to the
 libc functions if this fails.
 
-- a user-space program (bysyscall) is responsible for launching BPF programs
-to help populate cache values and update them in response to events
+- a user-space service and associated program (bysyscall) is responsible
+for launching BPF programs to help populate cache values and update them
+in response to events.
+
+The bysyscall service runs the bysyscall program, which loads and attaches
+the set of BPF programs needed to update the shared memory map values
+from the BPF side.  These are then pinned and the program exits. As a
+result there is nothing running in userspace aside from the `LD_PRELOAD`ed
+library to support syscall bypass.
 
 # bysyscall usage
 
 To use bysyscall it will then be a matter of using the LD_PRELOAD approach
-to launch your program e.g.
+to launch your program (once the bysyscall service has been started)
+
 
 ```
+$ service bysyscall start
+
 $ LD_PRELOAD=/usr/lib64/libbsyscall.so myprogram
 ```
 
-When a program is launched this way, libybsyscall's replacement libc
+When a program is launched this way, libybsyscall's replacement library
 wrapper functions will be run, avoiding system calls where possible.
 
-# Supported libc syscall wrapper functions
+# Supported syscall wrapper functions
 
 Per-task bysyscall wrappers are provided for
 
-- getpid()
-- getppid() (to do)
-- getuid() (to do)
-- geteuid() (to do)
+- `getpid()`
+- `getuid()`
+- `getgid()`
 
 # Example usage
 
@@ -89,7 +98,7 @@ sys	0m0.001s
 It took less than 1/10 of a second this time.
 
 We can try the same with other programs.  If we set BYSYSCALL_LOG=info,
-we can see additional info about how many times bypass occurred:
+libbysyscall will log additional info about how many times bypass occurred:
 
 ```
 $ BYSYSCALL_LOG=info LD_PRELOAD=/usr/lib64/libbysyscall.so /usr/bin/python3

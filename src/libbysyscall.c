@@ -156,4 +156,3 @@ gid_t getgid(void)
 	}
 	return ((gid_t (*)())(bysyscall_real_fns[BYSYSCALL_getgid]))();
 }
-

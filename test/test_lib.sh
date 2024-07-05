@@ -35,6 +35,7 @@ export VERBOSE=${VERBOSE:-0}
 
 if [[ "$VERBOSE" == "1" ]]; then
 	export DEBUG=1
+	export BYSYSCALL_LOG="debug"
 else
 	export DEBUG=${DEBUG:-0}
 fi
