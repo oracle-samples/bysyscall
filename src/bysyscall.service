@@ -4,7 +4,7 @@ After=local-fs.target
 
 [Service]
 Type=oneshot
-ExecStartPre=/usr/bin/chmod 777 /sys/fs/bpf
+ExecStartPre=mount -t bpf bpffs /sys/fs/bpf ; chmod 755 /sys/fs/bpf
 ExecStart=/usr/sbin/bysyscall
 ExecStop=/usr/bin/rm -fr /sys/fs/bpf/bysyscall
 RemainAfterExit=yes
