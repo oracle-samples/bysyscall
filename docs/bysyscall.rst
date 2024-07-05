@@ -26,7 +26,7 @@ DESCRIPTION
         or *CAP_SYS_ADMIN* on older systemes.  It can be run via a systemd
         service, but can also be run standalone if required.  Running
         **bysyscall** will load, attach and pin the required programs
-        and maps and exit.
+        and maps and exit.  It is run via the **bysysall** service.
 
         When a program runs with libbysyscall.so LD_PRELOADed the
         associated library init function is traced such that the
