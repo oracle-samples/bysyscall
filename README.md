@@ -88,5 +88,20 @@ sys	0m0.001s
 
 It took less than 1/10 of a second this time.
 
+We can try the same with other programs.  If we set BYSYSCALL_LOG=info,
+we can see additional info about how many times bypass occurred:
+
+```
+$ BYSYSCALL_LOG=info LD_PRELOAD=/usr/lib64/libbysyscall.so /usr/bin/python3
+Python 3.6.8 (default, May 24 2024, 06:39:46) 
+[GCC 8.5.0 20210514 (Red Hat 8.5.0-21.0.1)] on linux
+Type "help", "copyright", "credits" or "license" for more information.
+>>> exit()
+getpid: bypassed 2 times
+getuid: bypassed 1 times
+getgid: bypassed 1 times
+$
+```
+
 [1] https://bugzilla.redhat.com/show_bug.cgi?id=1443976
 [2] https://bugzilla.redhat.com/show_bug.cgi?id=1469670

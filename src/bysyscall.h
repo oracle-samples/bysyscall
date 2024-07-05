@@ -9,9 +9,11 @@
 
 struct bysyscall_pertask_data {
 	pid_t	pid;
-	pid_t	ppid;
+	pid_t	tid;
 	uid_t	uid;
 	uid_t	euid;
+	gid_t	gid;
+	gid_t	egid;
 };
 
 /* a task will map to an idx_data structure; this allows us to

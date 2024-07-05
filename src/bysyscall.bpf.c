@@ -44,6 +44,7 @@ static __always_inline int do_bysyscall_init(struct task_struct *task, int *pert
 {
 	struct bysyscall_idx_data *idxval = NULL, *newidxval;
 	struct bysyscall_idx_data **ptr;
+	__u64 uid_gid = 0;
 	int pid, ret;
 	int idx = 0;
 
@@ -51,7 +52,7 @@ static __always_inline int do_bysyscall_init(struct task_struct *task, int *pert
 	task = bpf_get_current_task_btf();
 	if (!task)
 		return 0;
-	pid = task->tgid;
+	pid = task->pid;
 
 	idxval = bpf_map_lookup_elem(&bysyscall_pertask_idx_hash, &pid);
 	if (!idxval) {
@@ -70,9 +71,11 @@ static __always_inline int do_bysyscall_init(struct task_struct *task, int *pert
 	}
 	idxval->flags |= BYSYSCALL_IDX_IN_USE;
 	idx = idxval->value & (BYSYSCALL_PERTASK_DATA_CNT - 1);
-	printk("got idx %d\n", idx);
-	bysyscall_pertask_data[idx].pid = pid;
-	printk("set pid to %d\n", pid);
+	bysyscall_pertask_data[idx].pid = task->tgid;
+	bysyscall_pertask_data[idx].tid = pid;
+	uid_gid = bpf_get_current_uid_gid();
+	bysyscall_pertask_data[idx].gid = uid_gid >> 32;
+	bysyscall_pertask_data[idx].uid = uid_gid & 0xffffffff;
 	if (!pertask_idx)
 		pertask_idx = idxval->ptr;
 	if (pertask_idx) {

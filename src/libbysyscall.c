@@ -19,14 +19,13 @@
 
 #include "libbysyscall.h"
 
-int bysyscall_pertask_fd = -1;
-volatile int bysyscall_pertask_data_idx = -1;
+static int bysyscall_pertask_fd = -1;
+__thread volatile int bysyscall_pertask_data_idx = -1;
 
 struct bysyscall_pertask_data *bysyscall_pertask_data;
 
-void *dlh = NULL;
-
-void *bysyscall_real_fns[BYSYSCALL_CNT];
+static void *bysyscall_real_fns[BYSYSCALL_CNT] = {};
+static unsigned long bysyscall_stats[BYSYSCALL_CNT];
 
 int bysyscall_loglevel = LOG_ERR;
 
@@ -41,27 +40,29 @@ void bysyscall_log(int level, const char *fmt, ...)
 	}
 }
 
-__attribute__((noinline)) void __bysyscall_init(__attribute__((unused))volatile int *pertask_data_idx)
+/* This function is instrumented to allow us to set the pertask data idx
+ * from BPF context via bpf_probe_write_user().
+ */
+__attribute__((noinline)) void __bysyscall_init(__attribute__((unused))volatile int *pertask_data_idxp)
 {
 }
 
 void __attribute__ ((constructor)) bysyscall_init(void)
 {
-	const char *libc, *debug;
+	const char *log;
 	int i;
 
-	debug = getenv("DEBUG");
-	if (debug && atoi(debug) > 0) {
-		bysyscall_loglevel = LOG_DEBUG;
-		bysyscall_log(LOG_DEBUG, "set loglevel to DEBUG...\n");
+	log = getenv("BYSYSCALL_LOG");
+	if (log) {
+		if (strcmp(log, "info") == 0)
+			bysyscall_loglevel = LOG_INFO;
+		if (strcmp(log, "err") == 0)
+			bysyscall_loglevel = LOG_ERR;
+		if (strcmp(log,  "debug") == 0)
+			bysyscall_loglevel = LOG_DEBUG;
 	}
-	libc = getenv("LIBC");
-	if (!libc)
-		libc = "libc.so.6";
+	bysyscall_log(LOG_DEBUG, "set loglevel to DEBUG...\n");
 
-	dlh = dlopen(libc, RTLD_NOW);
-	if (!dlh)
-		return;
 	for (i = 0; i < BYSYSCALL_CNT; i++) {
 		bysyscall_real_fns[i] = dlsym(RTLD_NEXT, bysyscall_names[i]);
 		if (!bysyscall_real_fns[i]) {
@@ -96,6 +97,8 @@ void __attribute__ ((constructor)) bysyscall_init(void)
 				      BYSYSCALL_PERTASK_DATA_PIN,
 				      strerror(errno));
 			bysyscall_pertask_data = NULL;
+			close(bysyscall_pertask_fd);
+			bysyscall_pertask_fd = -1;
 		}
 	}
 }
@@ -104,11 +107,21 @@ __attribute__((noinline)) void __bysyscall_fini(__attribute__((unused))volatile 
 {
 }
 
+static void bysyscall_stat(void)
+{
+	unsigned int i;
+
+	for (i = 0; i < BYSYSCALL_CNT; i++) {
+		bysyscall_log(LOG_INFO, "%s: bypassed %ld times\n",
+			      bysyscall_names[i], bysyscall_stats[i]);
+	}
+}
+     
 void __attribute__ ((destructor)) bysyscall_fini(void)
 {
 	__bysyscall_fini(bysyscall_pertask_data_idx);
-	if (dlh)
-		dlclose(dlh);
+	if (bysyscall_loglevel >= LOG_INFO)
+		bysyscall_stat();
 }
 
 static inline bool have_bysyscall_pertask_data(void)
@@ -119,9 +132,28 @@ static inline bool have_bysyscall_pertask_data(void)
 
 pid_t getpid(void)
 {
-	bysyscall_log(LOG_DEBUG,  "getpid (fd %d, data idx %d)\n",
-		      bysyscall_pertask_fd, bysyscall_pertask_data_idx);
-	if (have_bysyscall_pertask_data())
+	if (have_bysyscall_pertask_data()) {
+		bysyscall_stats[BYSYSCALL_getpid]++;
 		return bysyscall_pertask_data[bysyscall_pertask_data_idx].pid;
+	}
 	return ((pid_t (*)())(bysyscall_real_fns[BYSYSCALL_getpid]))();
 }
+
+uid_t getuid(void)
+{
+	if (have_bysyscall_pertask_data()) {
+		bysyscall_stats[BYSYSCALL_getuid]++;
+		return bysyscall_pertask_data[bysyscall_pertask_data_idx].uid;
+	}
+	return ((uid_t (*)())(bysyscall_real_fns[BYSYSCALL_getuid]))();
+}
+
+gid_t getgid(void)
+{
+	if (have_bysyscall_pertask_data()) {
+		bysyscall_stats[BYSYSCALL_getgid]++;
+		return bysyscall_pertask_data[bysyscall_pertask_data_idx].gid;
+	}
+	return ((gid_t (*)())(bysyscall_real_fns[BYSYSCALL_getgid]))();
+}
+
