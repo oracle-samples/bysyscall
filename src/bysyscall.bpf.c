@@ -16,13 +16,6 @@ struct bysyscall_pertask_data bysyscall_pertask_data[BYSYSCALL_PERTASK_DATA_CNT]
 long next_idx = -1;
 
 struct {
-	__uint(type, BPF_MAP_TYPE_TASK_STORAGE);
-	__uint(map_flags, BPF_F_NO_PREALLOC);
-	__type(key, int);
-	__type(value, struct bysyscall_idx_data *);
-} bysyscall_pertask SEC(".maps");
-
-struct {
 	__uint(type, BPF_MAP_TYPE_HASH);
 	__uint(max_entries, BYSYSCALL_PERTASK_DATA_CNT);
 	__type(key, int);
@@ -48,7 +41,6 @@ static __always_inline int do_bysyscall_init(struct task_struct *task, int *pert
 	int pid, ret;
 	int idx = 0;
 
-	printk("do_bysyscall_init task 0x%lx\n", task);
 	task = bpf_get_current_task_btf();
 	if (!task)
 		return 0;
@@ -65,10 +57,8 @@ static __always_inline int do_bysyscall_init(struct task_struct *task, int *pert
 			return 0;
 		idxval = bpf_map_lookup_elem(&bysyscall_pertask_idx_hash, &pid);
 	}
-	if (!idxval || bysyscall_idx_in_use(idxval)) {
-		printk("idx in use!\n");
+	if (!idxval || bysyscall_idx_in_use(idxval))
 		return 0;
-	}
 	idxval->flags |= BYSYSCALL_IDX_IN_USE;
 	idx = idxval->value & (BYSYSCALL_PERTASK_DATA_CNT - 1);
 	bysyscall_pertask_data[idx].pid = task->tgid;
@@ -88,11 +78,6 @@ static __always_inline int do_bysyscall_init(struct task_struct *task, int *pert
 		printk("wrote idx %d to userspace!\n", idx);
 	}
 	newidxval = idxval;	
-	ptr = bpf_task_storage_get(&bysyscall_pertask, task, &idxval,
-                                   BPF_LOCAL_STORAGE_GET_F_CREATE);
-        if (!ptr)
-                return 0;
-	*ptr = idxval;
 	return 0;
 }
 
@@ -108,22 +93,6 @@ int BPF_UPROBE(bysyscall_init, int *pertask_idx)
 	return do_bysyscall_init(task, pertask_idx);
 }
 
-SEC("tp_btf/task_newtask")
-int BPF_PROG(bysyscall_task_newtask, struct task_struct *task, u64 clone_flags)
-{
-	struct task_struct *current = bpf_get_current_task_btf();
-	struct bysyscall_idx_data *idxval = NULL;
-
-	if (!current)
-		return 0;
-	__bpf_printk("in task_newtask...\n");
-	/* is the currrent (parent process) instrumented for bysyscall? */
-	idxval = bpf_task_storage_get(&bysyscall_pertask, current, &idxval, 0);
-	if (!idxval)
-		return 0;
-	return do_bysyscall_init(task, idxval->ptr);
-}
-
 static __always_inline int do_bysyscall_fini(void)
 {
 	struct task_struct *task;
@@ -134,7 +103,6 @@ static __always_inline int do_bysyscall_fini(void)
 	if (!task)
 		return 0;
 	pid = task->pid;
-	bpf_task_storage_delete(&bysyscall_pertask, task);
 	idxval = bpf_map_lookup_elem(&bysyscall_pertask_idx_hash, &pid);
 	if (!idxval || bysyscall_idx_in_use(idxval))
 		return 0;

@@ -85,7 +85,8 @@ int main(int argc, char *argv[])
 			goto done;
 		}
 	}
-	chmod(BYSYSCALL_PERTASK_DATA_PIN, 0777);
+	chmod(BYSYSCALL_PERTASK_DATA_PIN,
+	      S_IRUSR|S_IWUSR|S_IRGRP|S_IWGRP|S_IROTH|S_IWOTH);
 
 done:
 	if (err)
