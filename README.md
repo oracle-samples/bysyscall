@@ -51,6 +51,21 @@ to write the relevant index and from then on callers of system call
 wrappers can use that index to retrieve per-task data from the
 memory-mapped array.
 
+When a process that uses the libbysyscall library `fork()`s, we
+explitictly call the initialization function (which is instrumented
+by our bysyscall BPF program) to ensure that we get a new index
+for the new process.
+
+`pthread_create()` is more complicated.  We here instrument
+the `start_thread()` function and dynamically compute the offset
+of the per-thread variable holding the array map index; it is
+found relative to the `pthread_t` argument to `start_thread()`.
+Once we have the address of the per-thread index variable and
+the task struct, we can initialize the per-thread data and
+set the index in the per-thread variable before the user method
+runs.  This means the cached values can always be used in the
+thread context.
+
 # Why is this needed?
 
 With the approach of using an LD_PRELOAD library, a reasonable question
@@ -63,6 +78,10 @@ right places, we can update our cached values when things change
 
 In addition some system calls like getrusage() are not amenable to
 caching as their values keep changing.
+
+Finally we see in the `pthread_create()` case that BPF instrumentation
+allows us to catch thread creation and prepare our cached data
+ahead of thread execution.
 
 # bysyscall usage
 
@@ -135,6 +154,16 @@ getuid: bypassed 1 times
 getgid: bypassed 1 times
 $
 ```
+
+# Testing
+
+Tests can be run via
+
+```
+# sudo make test
+```
+
+...either at the toplevel, or in the `test/` subdirectory.
 
 [1] https://bugzilla.redhat.com/show_bug.cgi?id=1443976
 [2] https://bugzilla.redhat.com/show_bug.cgi?id=1469670
