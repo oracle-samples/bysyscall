@@ -116,10 +116,17 @@ SEC("uprobe/libpthread.so:start_thread")
 int BPF_UPROBE(bysyscall_start_thread, void *arg)
 {
 	struct task_struct *task;
+	struct bysyscall_idx_data *idxval;
+	int pid;
 	int *pertask_idx = NULL;
 
 	task = bpf_get_current_task_btf();
 	if (!task)
+		return 0;
+	pid = task->tgid;
+	/* are we collecting data for this process? if not, bail. */
+	idxval = bpf_map_lookup_elem(&bysyscall_pertask_idx_hash, &pid);
+	if (!idxval)
 		return 0;
 	if (bysyscall_perthread_data_offset == BYSYSCALL_PERTHREAD_OFF_INVAL)
 		return 0;

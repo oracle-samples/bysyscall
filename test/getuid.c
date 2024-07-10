@@ -3,25 +3,29 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <pthread.h>
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <unistd.h>
 #include <sys/syscall.h>
 
+static void *runtest(void *);
 
 int main(int argc, char *argv[])
 {
-	uid_t uid1, uid2, lastuid;
+	int i, count = 1, dofork = 0, dopthread = 0, ret = 0;
 	pid_t newpid;
-	int i, count = 1, dofork = 0;
 
 	if (argc > 1)
 		count = atoi(argv[1]);
-	if (argc > 2)
+	if (argc > 2) {
 		dofork = strcmp(argv[2], "fork") == 0;
+		dopthread = strcmp(argv[2], "pthread") == 0;
+	}
+
 
 	if (dofork) {
-		int ret, status = 0;
+		int status = 0;
 
 		newpid = fork();
 		if (newpid > 0) {
@@ -36,6 +40,35 @@ int main(int argc, char *argv[])
 		if (newpid < 0)
 			exit(newpid);
 	}
+
+	ret = count;
+	if (dopthread) {
+		pthread_t tid;
+		pthread_attr_t attr;
+		void *rv;
+
+		if (pthread_attr_init(&attr)) {
+			perror("pthread_attr_init");
+			return -1;
+		}
+		if (pthread_create(&tid, &attr, &runtest, &ret)) {
+			perror("pthread_create");
+			return -1;
+		}
+		(void)pthread_join(tid, &rv);
+	} else {
+		runtest(&ret);
+	}
+	return ret;
+}
+
+static void *runtest(void *data)
+{
+	uid_t uid1, uid2, lastuid = 0;
+	int i, count, *ret = (int *)data;
+
+	count = *ret;
+
 	for (i = 0; i < count; i++) {
 		uid1 = getuid();
 		if (lastuid && lastuid != uid1) {
@@ -50,10 +83,11 @@ int main(int argc, char *argv[])
 	if (uid1 != uid2) {
 		fprintf(stderr, "uid from getuid() (%d) != uid from syscall (%d)\n",
 			uid1, uid2);
-
-		return 1;
+		*ret = -1;
+		return NULL;
 	}
 	printf("%d uid from getuid() (%d) matches uid from syscall (%d)\n",
 	       count, uid1, uid2);
-	return 0;
+	*ret = 0;
+	return NULL;
 }

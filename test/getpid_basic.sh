@@ -42,22 +42,17 @@ $BYSYSCALL_CMD
 
 if [[ ! -d "/sys/fs/bpf/bysyscall" ]]; then 
 	echo "no bysyscall pin"
-	test_fail
+	test_cleanup
 fi
 
-export $BYSYSCALL_LD_PRELOAD
 
-test_run_cmd_local "./getpid" true
-
-cat ${TESTLOG_PREFIX}.$$
+eval $BYSYSCALL_LD_PRELOAD ./getpid 2>&1|grep "bypassed 1"
 
 test_pass
 
 test_start "$0: verify $COUNT pid matches (test)"
 
-test_run_cmd_local "./getpid $COUNT" true
-
-grep "getpid: bypassed $COUNT times" $TESTLOG
+eval $BYSYSCALL_LD_PRELOAD ./getpid $COUNT 2>&1|grep "bypassed $COUNT"
 
 test_pass
 

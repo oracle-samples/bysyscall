@@ -22,35 +22,39 @@
 . ./test_lib.sh
 
 test_setup true
-test_start "$0: verify pid match after fork (baseline)"
+test_start "$0: verify uid match after fork (baseline)"
 
-test_run_cmd_local "./getpid 1 fork"
+test_run_cmd_local "./getuid 1 fork" true
 
 test_pass
 
 COUNT=1000
 
-test_start "$0: verify $COUNT pid matches after fork (baseline)"
+test_start "$0: verify $COUNT uid matches after fork (baseline)"
 
-test_run_cmd_local "time ./getpid $COUNT fork"
-
-test_pass
-
-test_start "$0: verify pid match after fork (test)"
-
-test_run_cmd_local $BYSYSCALL_CMD
-
-export $BYSYSCALL_LD_PRELOAD
-test_run_cmd_local "./getpid 1 fork"
+test_run_cmd_local "./getuid $COUNT 1000 fork" true
 
 test_pass
 
-test_start "$0: verify $COUNT pid matches after fork (test)"
+test_start "$0: verify uid match after fork (test)"
 
-test_run_cmd_local "time ./getpid $COUNT fork"
+$BYSYSCALL_CMD
+
+if [[ ! -d "/sys/fs/bpf/bysyscall" ]]; then 
+	echo "no bysyscall pin"
+	test_cleanup
+fi
+
+
+eval $BYSYSCALL_LD_PRELOAD ./getuid 1 fork 2>&1|grep "bypassed 1"
 
 test_pass
 
+test_start "$0: verify $COUNT uid matches after fork (test)"
+
+eval $BYSYSCALL_LD_PRELOAD ./getuid $COUNT fork 2>&1|grep "bypassed $COUNT"
+
+test_pass
 
 test_cleanup
 

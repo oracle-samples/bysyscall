@@ -21,7 +21,8 @@ DEFAULT_TESTS = getpid_basic \
 	 	getpid_fork \
 		getpid_pthread \
 		getuid_basic \
-		getuid_fork
+		getuid_fork \
+		getuid_pthread
 
 TESTS = $(DEFAULT_TESTS)
 

@@ -22,21 +22,21 @@
 . ./test_lib.sh
 
 test_setup true
-test_start "$0: verify uid match (baseline)"
+test_start "$0: verify uid match after pthread_create (baseline)"
 
-test_run_cmd_local "./getuid" true
+test_run_cmd_local "./getuid 1 pthread" true
 
 test_pass
 
 COUNT=1000
 
-test_start "$0: verify $COUNT uid matches (baseline)"
+test_start "$0: verify $COUNT uid matches after pthread_create (baseline)"
 
-test_run_cmd_local "./getuid $COUNT" true
+test_run_cmd_local "./getuid $COUNT 1000 pthread" true
 
 test_pass
 
-test_start "$0: verify uid match (test)"
+test_start "$0: verify uid match after pthread_create (test)"
 
 $BYSYSCALL_CMD
 
@@ -46,16 +46,15 @@ if [[ ! -d "/sys/fs/bpf/bysyscall" ]]; then
 fi
 
 
-eval $BYSYSCALL_LD_PRELOAD ./getuid 2>&1|grep "bypassed 1"
+eval $BYSYSCALL_LD_PRELOAD ./getuid 1 pthread_create 2>&1|grep "bypassed 1"
 
 test_pass
 
-test_start "$0: verify $COUNT uid matches (test)"
+test_start "$0: verify $COUNT uid matches after pthread_create (test)"
 
-eval $BYSYSCALL_LD_PRELOAD ./getuid $COUNT 2>&1|grep "bypassed $COUNT"
+eval $BYSYSCALL_LD_PRELOAD ./getuid $COUNT pthread_create 2>&1|grep "bypassed $COUNT"
 
 test_pass
-
 
 test_cleanup
 
