@@ -10,6 +10,7 @@
 #include <fcntl.h>
 #include <signal.h>
 #include <unistd.h>
+#include <pthread.h>
 
 #include "bysyscall.h"
 
@@ -26,6 +27,8 @@ static void cleanup(int sig)
 	bysyscall_bpf__destroy(skel);
 	system("rm -fr " BYSYSCALL_PINDIR);
 }
+
+__thread int perthread_data;
 
 int main(int argc, char *argv[])
 {
@@ -44,10 +47,19 @@ int main(int argc, char *argv[])
 
 	signal(SIGINT, cleanup);
 
-	skel = bysyscall_bpf__open_and_load();
+	skel = bysyscall_bpf__open();
 	if (!skel)
 		return -1;
 
+	/* specify perthread data offset from pthread_t */
+	skel->data->bysyscall_perthread_data_offset = (long)&perthread_data -
+						      (long)pthread_self();
+
+	err = bysyscall_bpf__load(skel);
+	if (err) {
+		fprintf(stderr, "could not load bysyscall object: %d\n", err);
+		goto done;
+	}
 	map_dir_fd = open(BYSYSCALL_PINDIR, O_RDONLY);
 	close(map_dir_fd);
 	if (map_dir_fd < 0) {

@@ -7,6 +7,8 @@
 
 #define BYSYSCALL_PERTASK_DATA_CNT	8192
 
+#define BYSYSCALL_PERTHREAD_OFF_INVAL	-1
+
 struct bysyscall_pertask_data {
 	pid_t	pid;
 	pid_t	tid;

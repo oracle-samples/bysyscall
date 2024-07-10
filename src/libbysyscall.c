@@ -152,6 +152,7 @@ pid_t fork(void)
 	return ret;
 }
 
+/*
 struct bysyscall_thread_arg {
 	void *(*start)(void *);
 	void *arg;
@@ -179,7 +180,7 @@ int pthread_create(pthread_t *thread, const pthread_attr_t *attr,
 							      bysyscall_pthread_start,
 							      &ta);
 }
-
+*/
 static inline bool have_bysyscall_pertask_data(void)
 {
 	return bysyscall_pertask_fd > 0 && bysyscall_pertask_data &&

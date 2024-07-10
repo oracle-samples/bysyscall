@@ -5,8 +5,7 @@
 	FN(getpid),		\
 	FN(getuid),		\
 	FN(getgid),		\
-	FN(fork),		\
-	FN(pthread_create),
+	FN(fork),
 
 
 #define __BYSYSCALL_ENUM_FN(x)	BYSYSCALL_ ## x
