@@ -22,7 +22,10 @@ DEFAULT_TESTS = getpid_basic \
 		getpid_pthread \
 		getuid_basic \
 		getuid_fork \
-		getuid_pthread
+		getuid_pthread \
+		getgid_basic \
+		getgid_fork \
+		getgid_pthread
 
 TESTS = $(DEFAULT_TESTS)
 
@@ -31,7 +34,9 @@ LIBS = test_lib.sh
 LDLIBS = -lpthread
 
 PROGS = getpid \
-	getuid
+	gettid \
+	getuid \
+	getgid
 
 INSTALLFILES = $(DEFAULT_TESTS:%=%.sh) $(LIBS)
 

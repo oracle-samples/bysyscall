@@ -3,6 +3,7 @@
 /* Add new bysyscalls here */
 #define __BYSYSCALL_MAPPER(FN)	\
 	FN(getpid),		\
+	FN(gettid),		\
 	FN(getuid),		\
 	FN(getgid),		\
 	FN(fork),

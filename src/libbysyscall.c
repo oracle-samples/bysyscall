@@ -9,6 +9,7 @@
 #include <sys/stat.h>
 #include <sys/klog.h>
 #include <sys/syslog.h>
+#include <sys/syscall.h>
 #include <sys/mman.h>
 #include <fcntl.h>
 #include <unistd.h>
@@ -152,35 +153,6 @@ pid_t fork(void)
 	return ret;
 }
 
-/*
-struct bysyscall_thread_arg {
-	void *(*start)(void *);
-	void *arg;
-};
-
-struct bysyscall_thread_arg ta;
-
-static void *bysyscall_pthread_start(void *arg)
-{
-	struct bysyscall_thread_arg *ta = arg;
-
-	__bysyscall_init(&bysyscall_pertask_data_idx);
-
-	return ta->start(ta->arg);
-}
-
-int pthread_create(pthread_t *thread, const pthread_attr_t *attr,
-	       void *(*start)(void *), void *arg)
-{
-	ta.start = start;
-	ta.arg = arg;
-	return ((int (*)(pthread_t *, const pthread_attr_t *,
-			 void *(*)(void *), void *))
-		bysyscall_real_fns[BYSYSCALL_pthread_create])(thread, attr,
-							      bysyscall_pthread_start,
-							      &ta);
-}
-*/
 static inline bool have_bysyscall_pertask_data(void)
 {
 	return bysyscall_pertask_fd > 0 && bysyscall_pertask_data &&
@@ -194,6 +166,16 @@ pid_t getpid(void)
 		return bysyscall_pertask_data[bysyscall_pertask_data_idx].pid;
 	}
 	return ((pid_t (*)())bysyscall_real_fns[BYSYSCALL_getpid])();
+}
+
+pid_t gettid(void)
+{
+	if (have_bysyscall_pertask_data()) {
+		bysyscall_stats[BYSYSCALL_gettid]++;
+		return bysyscall_pertask_data[bysyscall_pertask_data_idx].pid;
+	}
+	/* there is not glibc wrapper for gettid() */
+	return syscall(__NR_gettid);
 }
 
 uid_t getuid(void)
