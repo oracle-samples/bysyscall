@@ -52,13 +52,13 @@ wrappers can use that index to retrieve per-task data from the
 memory-mapped array.
 
 When a process that uses the libbysyscall library `fork()`s, we
-explitictly call the initialization function (which is instrumented
+explicitly call the initialization function (which is instrumented
 by our bysyscall BPF program) to ensure that we get a new index
 for the new process.
 
 `pthread_create()` is more complicated.  We here instrument
-the `start_thread()` function and dynamically compute the offset
-of the per-thread variable holding the array map index; it is
+the libpthread `start_thread()` function and dynamically compute the
+offset of the per-thread variable holding the array map index; it is
 found relative to the `pthread_t` argument to `start_thread()`.
 Once we have the address of the per-thread index variable and
 the task struct, we can initialize the per-thread data and
