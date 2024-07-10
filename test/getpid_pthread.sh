@@ -56,6 +56,13 @@ eval $BYSYSCALL_LD_PRELOAD ./getpid $COUNT pthread_create 2>&1|grep "bypassed $C
 
 test_pass
 
+test_start "$0: verify $COUNT pid matches after pthread_create (test, user $BPFUSER)"
+
+sudo -u $BPFUSER BYSYSCALL_LOG=info $BYSYSCALL_LD_PRELOAD ./getpid $COUNT pthread 2>&1 |\
+        grep "bypassed $COUNT"
+
+test_pass
+
 test_cleanup
 
 test_exit

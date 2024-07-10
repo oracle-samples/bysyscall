@@ -56,6 +56,12 @@ eval $BYSYSCALL_LD_PRELOAD ./getuid $COUNT 2>&1|grep "bypassed $COUNT"
 
 test_pass
 
+test_start "$0: verify $COUNT uid matches (test, user $BPFUSER)"
+
+sudo -u $BPFUSER BYSYSCALL_LOG=info $BYSYSCALL_LD_PRELOAD ./getuid $COUNT 2>&1 |\
+        grep "bypassed $COUNT"
+
+test_pass
 
 test_cleanup
 

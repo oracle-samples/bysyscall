@@ -31,6 +31,8 @@ export TESTLOG_COUNT="${TESTDIR}/testcount.$TEST_ID"
 export SETUPTIME=5
 export SLEEPTIME=1
 
+export BPFUSER="bpfuser"
+
 # 1: more output, >1: xtrace
 export VERBOSE=${VERBOSE:-0}
 
@@ -159,11 +161,27 @@ test_run_cmd_local()
 	fi
 }
 
+add_bpfuser()
+{
+	set +e
+	bpfuser_present=$(grep -c $BPFUSER /etc/passwd )
+
+	# SELinux can block useradd
+	if [[ -f /usr/sbin/setenforce ]]; then
+		setenforce 0 >/dev/null 2>&1
+	fi
+	set -e
+	if [[ $bpfuser_present -ne "1" ]]; then
+		useradd -d /tmp/${BPFUSER} $BPFUSER
+	fi
+}
+
 test_setup_local()
 {
 	CMD=$1
 	TIMEOUT=$2
 
+	add_bpfuser
 	set +e
 	$BYSYSCALL_PROG stop 2>/dev/null
 	set -e
