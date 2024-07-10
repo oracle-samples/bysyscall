@@ -24,7 +24,7 @@
 test_setup true
 test_start "$0: verify pid match (baseline)"
 
-./getpid
+test_run_cmd_local "./getpid" true
 
 test_pass
 
@@ -32,22 +32,32 @@ COUNT=1000
 
 test_start "$0: verify $COUNT pid matches (baseline)"
 
-time ./getpid $COUNT
+test_run_cmd_local "./getpid $COUNT" true
 
 test_pass
 
 test_start "$0: verify pid match (test)"
 
-test_run_cmd_local $BYSYSCALL_CMD
+$BYSYSCALL_CMD
+
+if [[ ! -d "/sys/fs/bpf/bysyscall" ]]; then 
+	echo "no bysyscall pin"
+	test_fail
+fi
 
 export $BYSYSCALL_LD_PRELOAD
-./getpid
+
+test_run_cmd_local "./getpid" true
+
+cat ${TESTLOG_PREFIX}.$$
 
 test_pass
 
 test_start "$0: verify $COUNT pid matches (test)"
 
-time ./getpid $COUNT
+test_run_cmd_local "./getpid $COUNT" true
+
+grep "getpid: bypassed $COUNT times" $TESTLOG
 
 test_pass
 

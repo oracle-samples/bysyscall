@@ -19,12 +19,15 @@
 
 DEFAULT_TESTS = getpid_basic \
 	 	getpid_fork \
+		getpid_pthread \
 		getuid_basic \
 		getuid_fork
 
 TESTS = $(DEFAULT_TESTS)
 
 LIBS = test_lib.sh
+
+LDLIBS = -lpthread
 
 PROGS = getpid \
 	getuid
@@ -61,7 +64,7 @@ $(TESTS): %:%.sh
 	TEST_ID=$$PPID  bash $<
 
 $(PROGS): %:%.c
-	$(CC) $(CFLAGS) -o $@ $@.c
+	$(CC) $(CFLAGS) -o $@ $@.c $(LDLIBS)
 
 
 PHONY: clean

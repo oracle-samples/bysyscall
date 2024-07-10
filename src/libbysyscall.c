@@ -15,12 +15,20 @@
 #include <dlfcn.h>
 #include <errno.h>
 #include <string.h>
+#include <pthread.h>
 #include <bpf/bpf.h>
 
 #include "libbysyscall.h"
 
 static int bysyscall_pertask_fd = -1;
+
 __thread volatile int bysyscall_pertask_data_idx = -1;
+
+/* offset of per-thread variable from the associated pthread_t; we use
+ * this to set bysyscall_pertask_data_idx for the created thread after
+ * calling pthread_create().
+ */
+static long __perthread_data_off = 0;
 
 struct bysyscall_pertask_data *bysyscall_pertask_data;
 
@@ -52,6 +60,11 @@ void __attribute__ ((constructor)) bysyscall_init(void)
 	const char *log;
 	int i;
 
+	if (!__perthread_data_off) {
+		pthread_t self = pthread_self();
+
+		__perthread_data_off = (long)&bysyscall_pertask_data_idx - self;
+	}
 	log = getenv("BYSYSCALL_LOG");
 	if (log) {
 		if (strcmp(log, "info") == 0)
@@ -120,6 +133,7 @@ static void bysyscall_stat(void)
 			bysyscall_log(LOG_INFO, "%s: bypassed %ld times\n",
 				      bysyscall_names[i], bysyscall_stats[i]);
 	}
+	fflush(stderr);
 }
      
 void __attribute__ ((destructor)) bysyscall_fini(void)
@@ -136,6 +150,34 @@ pid_t fork(void)
 	if (ret == 0)
 		__bysyscall_init(&bysyscall_pertask_data_idx);
 	return ret;
+}
+
+struct bysyscall_thread_arg {
+	void *(*start)(void *);
+	void *arg;
+};
+
+struct bysyscall_thread_arg ta;
+
+static void *bysyscall_pthread_start(void *arg)
+{
+	struct bysyscall_thread_arg *ta = arg;
+
+	__bysyscall_init(&bysyscall_pertask_data_idx);
+
+	return ta->start(ta->arg);
+}
+
+int pthread_create(pthread_t *thread, const pthread_attr_t *attr,
+	       void *(*start)(void *), void *arg)
+{
+	ta.start = start;
+	ta.arg = arg;
+	return ((int (*)(pthread_t *, const pthread_attr_t *,
+			 void *(*)(void *), void *))
+		bysyscall_real_fns[BYSYSCALL_pthread_create])(thread, attr,
+							      bysyscall_pthread_start,
+							      &ta);
 }
 
 static inline bool have_bysyscall_pertask_data(void)

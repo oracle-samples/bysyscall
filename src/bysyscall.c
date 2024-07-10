@@ -60,7 +60,7 @@ int main(int argc, char *argv[])
 	}
 	err = bysyscall_bpf__attach(skel);
 	if (err) {
-		fprintf(stderr, "could not attack bysyscall progs: %d\n",
+		fprintf(stderr, "could not attach bysyscall progs: %d\n",
 			err);
 		goto done;
 	}
