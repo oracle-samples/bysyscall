@@ -17,15 +17,7 @@
 # Boston, MA 021110-1307, USA.
 #
 
-DEFAULT_TESTS = getpid_basic \
-	 	getpid_fork \
-		getpid_pthread \
-		getuid_basic \
-		getuid_fork \
-		getuid_pthread \
-		getgid_basic \
-		getgid_fork \
-		getgid_pthread
+DEFAULT_TESTS = basic
 
 TESTS = $(DEFAULT_TESTS)
 
@@ -34,9 +26,12 @@ LIBS = test_lib.sh
 LDLIBS = -lpthread
 
 PROGS = getpid \
-	gettid \
 	getuid \
 	getgid
+
+WRAPS = $(PROGS:%=-Wl,--wrap=%) -Wl,--wrap=fork
+
+PROGSLINKED = $(PROGS:%=%_linked)
 
 INSTALLFILES = $(DEFAULT_TESTS:%=%.sh) $(LIBS)
 
@@ -49,12 +44,12 @@ INSTALLPATH = $(installprefix)/lib/tcptune_test/
 install_sh_PROGRAM = install
 install_sh_DIR = install -dv
 
-all: $(PROGS)
+all: $(PROGS) $(PROGSLINKED)
 	
 PHONY: clean
 	
 clean:
-	rm -f $(PROGS)
+	rm -f $(PROGS) $(PROGSLINKED)
 
 test: $(TESTS)
 	
@@ -72,5 +67,7 @@ $(TESTS): %:%.sh
 $(PROGS): %:%.c
 	$(CC) $(CFLAGS) -o $@ $@.c $(LDLIBS)
 
+$(PROGSLINKED): %_linked:%.c
+	$(CC) $(CFLAGS) -o $@ $^ -lbysyscall $(WRAPS) $(LDLIBS)
 
 PHONY: clean

@@ -153,6 +153,11 @@ pid_t fork(void)
 	return ret;
 }
 
+pid_t __wrap_fork(void)
+{
+	return fork();
+}
+
 static inline bool have_bysyscall_pertask_data(void)
 {
 	return bysyscall_pertask_fd > 0 && bysyscall_pertask_data &&
@@ -168,14 +173,9 @@ pid_t getpid(void)
 	return ((pid_t (*)())bysyscall_real_fns[BYSYSCALL_getpid])();
 }
 
-pid_t gettid(void)
+pid_t __wrap_getpid(void)
 {
-	if (have_bysyscall_pertask_data()) {
-		bysyscall_stats[BYSYSCALL_gettid]++;
-		return bysyscall_pertask_data[bysyscall_pertask_data_idx].pid;
-	}
-	/* there is not glibc wrapper for gettid() */
-	return syscall(__NR_gettid);
+	return getpid();
 }
 
 uid_t getuid(void)
@@ -187,6 +187,11 @@ uid_t getuid(void)
 	return ((uid_t (*)())(bysyscall_real_fns[BYSYSCALL_getuid]))();
 }
 
+uid_t __wrap_getuid(void)
+{
+	return getuid();
+}
+
 gid_t getgid(void)
 {
 	if (have_bysyscall_pertask_data()) {
@@ -194,4 +199,9 @@ gid_t getgid(void)
 		return bysyscall_pertask_data[bysyscall_pertask_data_idx].gid;
 	}
 	return ((gid_t (*)())(bysyscall_real_fns[BYSYSCALL_getgid]))();
+}
+
+gid_t __wrap_getgid(void)
+{
+	return getgid();
 }

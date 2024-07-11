@@ -21,6 +21,13 @@ INSTALL ?= install
 
 CFLAGS = -fPIC -Wall -Wextra -march=native -g -std=c99
 
+FNS =	getpid \
+	getuid \
+	getgid \
+	fork
+
+WRAPS = $(FNS:%=--wrap=%)
+
 LDLIBS := -ldl -lbpf
 
 VMLINUX_BTF_PATH := /sys/kernel/btf/vmlinux

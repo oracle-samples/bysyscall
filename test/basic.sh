@@ -22,21 +22,28 @@
 . ./test_lib.sh
 
 test_setup true
-test_start "$0: verify pid match after fork (baseline)"
 
-test_run_cmd_local "./getpid 1 fork" true
+for MODE in "" "fork" "pthread" ; do
+
+for PROG in getpid getuid getgid ; do
+
+for SUFFIX in "" "_linked" ; do
+
+test_start "$0: verify $PROG match (baseline)"
+
+test_run_cmd_local "./${PROG} 1 $MODE" true
 
 test_pass
 
 COUNT=1000
 
-test_start "$0: verify $COUNT pid matches after fork (baseline)"
+test_start "$0: verify $COUNT $PROG matches (baseline) $MODE"
 
-test_run_cmd_local "./getpid $COUNT 1000 fork" true
+test_run_cmd_local "./${PROG} $COUNT $MODE" true
 
 test_pass
 
-test_start "$0: verify pid match after fork (test)"
+test_start "$0: verify ${PROG}${SUFFIX} match (test) $MODE"
 
 $BYSYSCALL_CMD
 
@@ -46,22 +53,33 @@ if [[ ! -d "/sys/fs/bpf/bysyscall" ]]; then
 fi
 
 
-eval $BYSYSCALL_LD_PRELOAD ./getpid 1 fork 2>&1|grep "bypassed 1"
+if [[ -z "$SUFFIX" ]]; then
+	PL=$BYSYSCALL_LD_PRELOAD
+else
+	PL=""
+fi
+eval $PL ./${PROG}${SUFFIX} 1 $MODE 2>&1|grep "bypassed 1"
 
 test_pass
 
-test_start "$0: verify $COUNT pid matches after fork (test)"
+test_start "$0: verify $COUNT $PROG matches (test) $MODE"
 
-eval $BYSYSCALL_LD_PRELOAD ./getpid $COUNT fork 2>&1|grep "bypassed $COUNT"
+eval $PL ./${PROG}${SUFFIX} $COUNT $MODE 2>&1|grep "bypassed $COUNT"
 
 test_pass
 
-test_start "$0: verify $COUNT pid matches after fork (test, user $BPFUSER)"
+test_start "$0: verify $COUNT $PROG matches (test, user $BPFUSER) $MODE"
 
-sudo -u $BPFUSER BYSYSCALL_LOG=info $BYSYSCALL_LD_PRELOAD ./getpid $COUNT fork 2>&1 |\
+sudo -u $BPFUSER $PL BYSYSCALL_LOG=info $PL ./${PROG}${SUFFIX} $COUNT 2>&1 |\
         grep "bypassed $COUNT"
 
 test_pass
+
+done
+
+done
+
+done
 
 test_cleanup
 

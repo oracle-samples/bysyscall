@@ -98,6 +98,16 @@ $ LD_PRELOAD=/usr/lib64/libbsyscall.so myprogram
 When a program is launched this way, libybsyscall's replacement library
 wrapper functions will be run, avoiding system calls where possible.
 
+Alternatively, you can build your program linking -lbysyscall.  If doing
+so, it is necessary to add `--wrap` [3] options for each library function
+you wish to override, along with `--wrap=fork`.
+
+For example, to compile a program with -lbysyscall to override fork:
+
+```
+$ cc -o myprog myprog.c -lbysyscall -Wl,--wrap=getid -Wl,--wrap=fork
+```
+
 # Supported syscall wrapper functions
 
 Per-task bysyscall wrappers are provided for
@@ -167,3 +177,4 @@ Tests can be run via
 
 [1] https://bugzilla.redhat.com/show_bug.cgi?id=1443976
 [2] https://bugzilla.redhat.com/show_bug.cgi?id=1469670
+[3] https://sourceware.org/binutils/docs-2.23.1/ld/Options.html#index-g_t_002d_002dwrap_003d_0040var_007bsymbol_007d-263
