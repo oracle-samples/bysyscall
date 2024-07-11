@@ -178,6 +178,6 @@ Tests can be run via
 
 ...either at the toplevel, or in the `test/` subdirectory.
 
-[1] https://bugzilla.redhat.com/show_bug.cgi?id=1443976
-[2] https://bugzilla.redhat.com/show_bug.cgi?id=1469670
-[3] https://sourceware.org/binutils/docs-2.23.1/ld/Options.html#index-g_t_002d_002dwrap_003d_0040var_007bsymbol_007d-263
+- [1] https://bugzilla.redhat.com/show_bug.cgi?id=1443976
+- [2] https://bugzilla.redhat.com/show_bug.cgi?id=1469670
+- [3] https://sourceware.org/binutils/docs-2.23.1/ld/Options.html#index-g_t_002d_002dwrap_003d_0040var_007bsymbol_007d-263
