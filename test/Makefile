@@ -25,6 +25,8 @@ LIBS = test_lib.sh
 
 LDLIBS = -lpthread
 
+LDFLAGS = -L../src
+
 PROGS = getpid \
 	getuid \
 	getgid
@@ -65,9 +67,9 @@ $(TESTS): %:%.sh
 	TEST_ID=$$PPID  bash $<
 
 $(PROGS): %:%.c
-	$(CC) $(CFLAGS) -o $@ $@.c $(LDLIBS)
+	$(CC) $(CFLAGS) -o $@ $@.c $(LDFLAGS) $(LDLIBS)
 
 $(PROGSLINKED): %_linked:%.c
-	$(CC) $(CFLAGS) -o $@ $^ -lbysyscall $(WRAPS) $(LDLIBS)
+	$(CC) $(CFLAGS) -o $@ $^ -lbysyscall $(WRAPS) $(LDFLAGS) $(LDLIBS)
 
 PHONY: clean
