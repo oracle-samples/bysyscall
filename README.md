@@ -110,11 +110,11 @@ you wish to override, along with `--wrap=fork`.
 For example, to compile a program with -lbysyscall to override `getpid()`:
 
 ```
-$ cc -o myprog myprog.c -lbysyscall -Wl,--wrap=getpid -Wl,--wrap=fork
+$ cc -o myprog myprog.c -lbysyscall -Wl,--wrap=getpid
 ```
 
-We need to override `fork` also to ensure any `fork()`ed process inherits
-bysyscall override support.
+Additional ovverrides should be added with more `-Wl,--wrap=<function>'
+options.
 
 # Supported syscall wrapper functions
 
