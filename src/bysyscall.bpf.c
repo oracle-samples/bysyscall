@@ -134,6 +134,29 @@ int BPF_UPROBE(bysyscall_start_thread, void *arg)
 	return do_bysyscall_init(task, pertask_idx);
 }
 
+SEC("uretprobe/libc.so.6:fork")
+int BPF_URETPROBE(bysyscall_fork_return, pid_t ret)
+{
+	struct task_struct *task;
+	struct bysyscall_idx_data *idxval;
+	int pid, ppid;
+	int *pertask_idx = NULL;
+
+	/* failed or in parent. */
+	if (ret < 0 || ret > 0)
+		return 0;
+	task = bpf_get_current_task_btf();
+	if (!task)
+		return 0;
+	ppid = task->real_parent->tgid;
+
+	/* are we collecting data for the parent process? if not, bail. */
+	idxval = bpf_map_lookup_elem(&bysyscall_pertask_idx_hash, &ppid);
+	if (!idxval)
+		return 0;
+	return do_bysyscall_init(task, idxval->ptr);
+}
+
 SEC("uprobe/libbysyscall.so:__bysyscall_fini")
 int BPF_UPROBE(bysyscall_fini, int pertask_idx)
 {

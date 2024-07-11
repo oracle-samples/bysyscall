@@ -43,7 +43,7 @@ test_run_cmd_local "./${PROG} $COUNT $MODE" true
 
 test_pass
 
-test_start "$0: verify ${PROG}${SUFFIX} match (test) $MODE"
+test_start "$0: verify ${PROG}${SUFFIX} match (test$SUFFIX) $MODE"
 
 $BYSYSCALL_CMD
 
@@ -62,13 +62,13 @@ eval $PL ./${PROG}${SUFFIX} 1 $MODE 2>&1|grep "bypassed 1"
 
 test_pass
 
-test_start "$0: verify $COUNT $PROG matches (test) $MODE"
+test_start "$0: verify $COUNT $PROG matches (test$SUFFIX) $MODE"
 
 eval $PL ./${PROG}${SUFFIX} $COUNT $MODE 2>&1|grep "bypassed $COUNT"
 
 test_pass
 
-test_start "$0: verify $COUNT $PROG matches (test, user $BPFUSER) $MODE"
+test_start "$0: verify $COUNT $PROG matches (test$SUFFIX, user $BPFUSER) $MODE"
 
 sudo -u $BPFUSER $PL BYSYSCALL_LOG=info $PL ./${PROG}${SUFFIX} $COUNT 2>&1 |\
         grep "bypassed $COUNT"

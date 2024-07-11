@@ -19,8 +19,9 @@ vDSO does.
 - BPF programs can run in the kernel and populate memory-mapped maps with
 kernel data such that userspace can read those values (like pid in the
 case of getpid()) without making a system call.
-- BPF programs can trigger on specific events in kernel such as entering
-a pid namespace and update cache values in response to such events.
+- BPF programs can trigger on specific events in kernel such as `fork()`ing
+a new process, starting a new pthread or entering a pid namespace, and
+update cache values in response to such events.
 
 # bysyscall design
 
@@ -51,20 +52,24 @@ to write the relevant index and from then on callers of system call
 wrappers can use that index to retrieve per-task data from the
 memory-mapped array.
 
-When a process that uses the libbysyscall library `fork()`s, we
-explicitly call the initialization function (which is instrumented
-by our bysyscall BPF program) to ensure that we get a new index
-for the new process.
+When a process that is using bysyscall calls `fork()`, we instrument
+the fork() return for the child process (where the return value is 0).
+In this case, we check if the parent process is indeed using bysyscall
+(it has an index map entry), and if it does we populate the newly-created
+process array map values and update the index to point at that task.
 
-`pthread_create()` is more complicated.  We here instrument
-the libpthread `start_thread()` function and dynamically compute the
-offset of the per-thread variable holding the array map index; it is
+`pthread_create()` is similar.  We here instrument the libpthread
+`start_thread()` function and dynamically compute the offset of
+the per-thread variable holding the array map index; it is
 found relative to the `pthread_t` argument to `start_thread()`.
 Once we have the address of the per-thread index variable and
 the task struct, we can initialize the per-thread data and
 set the index in the per-thread variable before the user method
 runs.  This means the cached values can always be used in the
 thread context.
+
+In the fork() case the same address is used but in different address
+spaces, so copy-on-write assures that we have the appropriate values.
 
 # Why is this needed?
 
@@ -74,7 +79,7 @@ pid, uid etc.
 
 This is where BPF comes in - by attaching BPF programs to the
 right places, we can update our cached values when things change
-(e.g. a setuid() call changing the uid).
+(e.g. a setuid() call changing the uid, a process fork etc).
 
 In addition some system calls like getrusage() are not amenable to
 caching as their values keep changing.

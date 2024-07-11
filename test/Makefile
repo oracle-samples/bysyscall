@@ -29,7 +29,7 @@ PROGS = getpid \
 	getuid \
 	getgid
 
-WRAPS = $(PROGS:%=-Wl,--wrap=%) -Wl,--wrap=fork
+WRAPS = $(PROGS:%=-Wl,--wrap=%)
 
 PROGSLINKED = $(PROGS:%=%_linked)
 

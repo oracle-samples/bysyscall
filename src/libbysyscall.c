@@ -143,21 +143,6 @@ void __attribute__ ((destructor)) bysyscall_fini(void)
 	bysyscall_stat();
 }
 
-pid_t fork(void)
-{
-	pid_t ret = ((pid_t (*)())bysyscall_real_fns[BYSYSCALL_fork])();
-
-	/* in child, init pertask idx */
-	if (ret == 0)
-		__bysyscall_init(&bysyscall_pertask_data_idx);
-	return ret;
-}
-
-pid_t __wrap_fork(void)
-{
-	return fork();
-}
-
 static inline bool have_bysyscall_pertask_data(void)
 {
 	return bysyscall_pertask_fd > 0 && bysyscall_pertask_data &&
