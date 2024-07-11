@@ -102,11 +102,14 @@ Alternatively, you can build your program linking -lbysyscall.  If doing
 so, it is necessary to add `--wrap` [3] options for each library function
 you wish to override, along with `--wrap=fork`.
 
-For example, to compile a program with -lbysyscall to override fork:
+For example, to compile a program with -lbysyscall to override `getpid()`:
 
 ```
-$ cc -o myprog myprog.c -lbysyscall -Wl,--wrap=getid -Wl,--wrap=fork
+$ cc -o myprog myprog.c -lbysyscall -Wl,--wrap=getpid -Wl,--wrap=fork
 ```
+
+We need to override `fork` also to ensure any `fork()`ed process inherits
+bysyscall override support.
 
 # Supported syscall wrapper functions
 
