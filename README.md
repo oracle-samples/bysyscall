@@ -88,6 +88,27 @@ Finally we see in the `pthread_create()` case that BPF instrumentation
 allows us to catch thread creation and prepare our cached data
 ahead of thread execution.
 
+# Getting started
+
+If building the repository manually, simply run
+
+```
+$ make ; sudo make install
+```
+
+To build, the following packages are needed (names may vary by distro);
+
+- libbpf, libbpf-devel >= 1
+- libcap-devel
+- bpftool >= 4.18
+- clang >= 11
+- llvm >= 11
+- python3-docutils
+
+From the kernel side, BPF trampoline (fentry/fexit) needs to be
+supported along with kernel BTF; check for presence of
+`/sys/kernel/btf/vmlinux`.
+
 # bysyscall usage
 
 To use bysyscall it will then be a matter of using the LD_PRELOAD approach
@@ -183,6 +204,27 @@ Tests can be run via
 
 ...either at the toplevel, or in the `test/` subdirectory.
 
+# Security
+
+Please consult the [security guide](./SECURITY.md) for our responsible security vulnerability disclosure process
+
+# License
+
+Copyright (c) 2024 Oracle and/or its affiliates.
+
+This software is available to you under
+
+SPDX-License-Identifier: GPL-2.0 WITH Linux-syscall-note
+
+Being under the terms of the GNU General Public License version 2.
+
+SPDX-URL: https://spdx.org/licenses/GPL-2.0.html
+
+See [the license file](./LICENSE.txt) for more details.
+
+# References
+
 - [1] https://bugzilla.redhat.com/show_bug.cgi?id=1443976
 - [2] https://bugzilla.redhat.com/show_bug.cgi?id=1469670
 - [3] https://sourceware.org/binutils/docs-2.23.1/ld/Options.html#index-g_t_002d_002dwrap_003d_0040var_007bsymbol_007d-263
+
