@@ -55,11 +55,12 @@ clean:
 	$(Q)$(RM) *.skel.h vmlinux.h
 
 install: $(PROG) $(LIB) bysyscall.service
-	$(Q)$(INSTALL) -m 0755 -d $(installprefix)/sbin
-	$(Q)$(INSTALL) $(PROG) $(installprefix)/sbin
-	$(Q)$(INSTALL) $(LIB).so $(installprefix)/lib64
-	$(Q)$(INSTALL) -m 0755 -d $(installprefix)/lib/systemd/system
-	$(Q)$(INSTALL) -m 644 bysyscall.service $(installprefix)/lib/systemd/system
+	$(INSTALL) -m 0755 -d $(INSTALLPATH)/sbin
+	$(INSTALL) $(PROG) $(INSTALLPATH)/sbin
+	$(INSTALL) -m 0755 -d $(INSTALLPATH)/lib64
+	$(INSTALL) $(LIB).so $(INSTALLPATH)/lib64
+	$(INSTALL) -m 0755 -d $(INSTALLPATH)/lib/systemd/system
+	$(INSTALL) -m 644 bysyscall.service $(INSTALLPATH)/lib/systemd/system
 
 $(PROG): $(PROG).o
 	$(QUIET_LINK)$(CC) $(CFLAGS) $^ -lbpf -o $@
