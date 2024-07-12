@@ -33,9 +33,14 @@ int main(int argc, char *argv[])
 				sleep(1);
 			if (ret < 0)
 				status = -1;
-			if (WEXITSTATUS(status) == 0)
-				status = 0;
-			return status;
+			if (WEXITSTATUS(status) == 0) {
+				/* ensure parent pid still matches syscall */
+				ret = count;
+				runtest(&ret);
+				return ret;
+			} else {
+				return status;
+			}
 		}
 		if (newpid < 0)
 			exit(newpid);
@@ -56,9 +61,10 @@ int main(int argc, char *argv[])
 			return -1;
 		}
 		(void)pthread_join(tid, &rv);
-	} else {
-		runtest(&ret);
+		/* ensure main thread pid still matches */
+		ret = count;
 	}
+	runtest(&ret);
 	return ret;
 }
 

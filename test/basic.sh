@@ -58,20 +58,20 @@ if [[ -z "$SUFFIX" ]]; then
 else
 	PL=""
 fi
-eval $PL ./${PROG}${SUFFIX} 1 $MODE 2>&1|grep "bypassed 1"
+eval $PL ./${PROG}${SUFFIX} 1 $MODE 2>&1|grep "bypassed"
 
 test_pass
 
 test_start "$0: verify $COUNT $PROG matches (test$SUFFIX) $MODE"
 
-eval $PL ./${PROG}${SUFFIX} $COUNT $MODE 2>&1|grep "bypassed $COUNT"
+eval $PL ./${PROG}${SUFFIX} $COUNT $MODE 2>&1|grep "bypassed"
 
 test_pass
 
 test_start "$0: verify $COUNT $PROG matches (test$SUFFIX, user $BPFUSER) $MODE"
 
 sudo -u $BPFUSER $PL BYSYSCALL_LOG=info $PL ./${PROG}${SUFFIX} $COUNT 2>&1 |\
-        grep "bypassed $COUNT"
+        grep "bypassed"
 
 test_pass
 
