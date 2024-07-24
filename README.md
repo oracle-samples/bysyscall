@@ -143,7 +143,7 @@ wrapper functions will be run, avoiding system calls where possible.
 
 Alternatively, you can build your program linking -lbysyscall.  If doing
 so, it is necessary to add `--wrap` [3] options for each library function
-you wish to override, along with `--wrap=fork`.
+you wish to override.
 
 For example, to compile a program with -lbysyscall to override `getpid()`:
 
