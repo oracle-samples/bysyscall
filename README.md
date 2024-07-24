@@ -72,14 +72,14 @@ In the fork() case the same address is used but in different address
 spaces, so copy-on-write assures that we have the appropriate values.
 
 ```
-userspace		    				kernel
+Userspace		    				Kernel
 		     	  	+-----------+	
 				|           |
 				|           |
-syscall wrappers read <-------  |shared map | <== BPF programs update per-task
-per-task data from shared map	|           |	  data (pid, uid)
-using per-task array index	|           |
-				+-----------+
+syscall wrappers read <=======  |shared map | <== BPF programs update per-task
+per-task data from		|           |	  data (pid, uid)
+shared map using		|           |
+perthread array index		+-----------+
 
 perthread array index <========================== BPF programs write per-thread
 						  index value for newly-created
