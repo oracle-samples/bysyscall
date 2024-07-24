@@ -71,6 +71,23 @@ thread context.
 In the fork() case the same address is used but in different address
 spaces, so copy-on-write assures that we have the appropriate values.
 
+```
+userspace		    				kernel
+		     	  	+-----------+	
+				|           |
+				|           |
+syscall wrappers read <-------  |shared map | <== BPF programs update per-task
+per-task data from shared map	|           |	  data (pid, uid)
+using per-task array index	|           |
+				+-----------+
+
+perthread array index <========================== BPF programs write per-thread
+						  index value for newly-created
+						  tasks using libbysyscall,
+						  or tasks fork()ed from
+						  such tasks
+```
+
 # Why is this needed?
 
 With the approach of using an LD_PRELOAD library, a reasonable question
