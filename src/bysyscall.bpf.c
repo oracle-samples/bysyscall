@@ -122,7 +122,9 @@ static __always_inline int do_bysyscall_fini(void)
 	return 0;
 }
 
-/* start_thread() is passed the pthread_t; we can compute the __thread
+/* Assign a new index, data on pthread_create(), update index in userspace.
+ *
+ * start_thread() is passed the pthread_t; we can compute the __thread
  * variable offset using it and the global bysyscall_perthread_data_offset
  * which bysyscall set by computing the difference between pthread_self
  * and the first __thread variable addresses.
@@ -149,6 +151,11 @@ int BPF_UPROBE(bysyscall_start_thread, void *arg)
 	return do_bysyscall_init(task, pertask_idx);
 }
 
+/* Assign a new index, cached data on fork() success, update the index in
+ * userspace for the newly-created task.
+ *
+ * Note we look for fork() return value of 0 indicating we are in child process.
+ */
 SEC("uretprobe/libc.so.6:fork")
 int BPF_URETPROBE(bysyscall_fork_return, pid_t ret)
 {
@@ -172,12 +179,14 @@ int BPF_URETPROBE(bysyscall_fork_return, pid_t ret)
 	return do_bysyscall_init(task, idxval->ptr);
 }
 
+/* Catch explicit library cleanup to free bysyscall array index for re-use */
 SEC("uprobe/libbysyscall.so:__bysyscall_fini")
 int BPF_UPROBE(bysyscall_fini, int pertask_idx)
 {
 	return do_bysyscall_fini();
 }
 
+/* Catch exit, exec to free bysyscall array index for re-use */
 SEC("tp_btf/sched_process_exit")
 int BPF_PROG(bysyscall_process_exit)
 {
@@ -190,6 +199,7 @@ int BPF_PROG(bysyscall_process_exec)
 	return do_bysyscall_fini();
 }
 
+/* Catch successful setuid() system calls, update cache */
 SEC("fexit/__sys_setuid")
 int BPF_PROG(bysyscall_setuid, uid_t uid, long ret)
 {
@@ -231,6 +241,20 @@ int BPF_PROG(bysyscall_setgid, gid_t gid, long ret)
 		return 0;
 	idx = idxval->value & (BYSYSCALL_PERTASK_DATA_CNT - 1);
 	bysyscall_pertask_data[idx].gid = gid;
+	return 0;
+}
+
+SEC("fexit/update_process_times")
+int BPF_PROG(update_process_times, int user_tick, int ret)
+{
+	struct task_struct *task = bpf_get_current_task_btf();
+	int pid, tgid;
+
+	if (task == NULL)
+		return 0;
+
+	pid = task->pid;
+
 	return 0;
 }
 

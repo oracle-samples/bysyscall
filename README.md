@@ -194,7 +194,9 @@ sys	0m0.001s
 
 ```
 
-It took less than 1/10 of a second this time.
+It took less than 1/10 of a second this time.  Note the sys time;
+for the baseline case it was 0.667 seconds, for the test case it was
+0.001 seconds, indicating much less time in-kernel.
 
 We can try the same with other programs.  If we set BYSYSCALL_LOG=info,
 libbysyscall will log additional info about how many times bypass occurred:
