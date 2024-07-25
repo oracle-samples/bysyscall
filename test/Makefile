@@ -17,7 +17,9 @@
 # Boston, MA 021110-1307, USA.
 #
 
-DEFAULT_TESTS = basic
+DEFAULT_TESTS = basic \
+		getuid_setuid \
+		getgid_setgid
 
 TESTS = $(DEFAULT_TESTS)
 

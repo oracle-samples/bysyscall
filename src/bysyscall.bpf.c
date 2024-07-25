@@ -190,4 +190,48 @@ int BPF_PROG(bysyscall_process_exec)
 	return do_bysyscall_fini();
 }
 
+SEC("fexit/__sys_setuid")
+int BPF_PROG(bysyscall_setuid, uid_t uid, long ret)
+{
+	struct bysyscall_idx_data *idxval;
+	struct task_struct *task;
+	int pid, idx = 0;
+
+	if (ret)
+		return 0;
+	/* are we collecting data for the process? if not, bail. */
+	task = bpf_get_current_task_btf();
+	if (!task)
+		return 0;
+	pid = task->tgid;
+        idxval = bpf_map_lookup_elem(&bysyscall_pertask_idx_hash, &pid);	
+	if (!idxval)
+		return 0;
+	idx = idxval->value & (BYSYSCALL_PERTASK_DATA_CNT - 1);
+	bysyscall_pertask_data[idx].uid = uid;
+	return 0;
+}
+
+SEC("fexit/__sys_setgid")
+int BPF_PROG(bysyscall_setgid, gid_t gid, long ret)
+{
+	struct bysyscall_idx_data *idxval;
+	struct task_struct *task;
+	int pid, idx = 0;
+
+	if (ret)
+		return 0;
+	/* are we collecting data for the process? if not, bail. */
+	task = bpf_get_current_task_btf();
+	if (!task)
+		return 0;
+	pid = task->tgid;
+	idxval = bpf_map_lookup_elem(&bysyscall_pertask_idx_hash, &pid);
+	if (!idxval)
+		return 0;
+	idx = idxval->value & (BYSYSCALL_PERTASK_DATA_CNT - 1);
+	bysyscall_pertask_data[idx].gid = gid;
+	return 0;
+}
+
 char _license[] SEC("license") = "GPL v2";

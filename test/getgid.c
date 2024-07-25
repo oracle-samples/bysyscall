@@ -30,6 +30,8 @@
 
 static void *runtest(void *);
 
+gid_t newgid = 0;
+
 int main(int argc, char *argv[])
 {
 	int i, count = 1, dofork = 0, dopthread = 0, ret = 0;
@@ -41,7 +43,8 @@ int main(int argc, char *argv[])
 		dofork = strcmp(argv[2], "fork") == 0;
 		dopthread = strcmp(argv[2], "pthread") == 0;
 	}
-
+	if (argc > 3)
+		newgid = atoi(argv[3]);
 
 	if (dofork) {
 		int status = 0;
@@ -88,6 +91,12 @@ static void *runtest(void *data)
 
 	count = *ret;
 
+	if (newgid) {
+		printf("setting gid to %d\n", newgid);
+		*ret = setgid(newgid);
+		if (*ret)
+			return NULL;
+	}
 	for (i = 0; i < count; i++) {
 		gid1 = getgid();
 		if (lastgid && lastgid != gid1) {

@@ -32,6 +32,7 @@ export SETUPTIME=5
 export SLEEPTIME=1
 
 export BPFUSER="bpfuser"
+export BPFGROUP="bpfgroup"
 
 # 1: more output, >1: xtrace
 export VERBOSE=${VERBOSE:-0}
@@ -165,14 +166,18 @@ add_bpfuser()
 {
 	set +e
 	bpfuser_present=$(grep -c $BPFUSER /etc/passwd )
+	bpfgroup_present=$(grep -c $BPFGROUP /etc/group )
 
 	# SELinux can block useradd
 	if [[ -f /usr/sbin/setenforce ]]; then
 		setenforce 0 >/dev/null 2>&1
 	fi
 	set -e
+	if [[ $bpfgroup_present -ne "1" ]]; then
+		groupadd $BPFGROUP
+	fi
 	if [[ $bpfuser_present -ne "1" ]]; then
-		useradd -d /tmp/${BPFUSER} $BPFUSER
+		useradd -d /tmp/${BPFUSER} -g $BPFGROUP $BPFUSER
 	fi
 }
 
