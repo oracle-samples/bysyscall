@@ -27,7 +27,7 @@ test_setup true
 
 for MODE in "none" "fork" "pthread" ; do
 
-for PROG in getuid ; do
+for PROG in getgid ; do
 
 for SUFFIX in "" "_linked" ; do
 
