@@ -26,6 +26,8 @@
 #include <sys/klog.h>
 #include <sys/syslog.h>
 #include <sys/syscall.h>
+#include <sys/time.h>
+#include <sys/resource.h>
 #include <sys/mman.h>
 #include <fcntl.h>
 #include <unistd.h>
@@ -205,4 +207,63 @@ gid_t getgid(void)
 gid_t __wrap_getgid(void)
 {
 	return getgid();
+}
+
+static inline void addrusage(struct rusage *tot, struct rusage *cur)
+{
+	tot->ru_utime.tv_sec += cur->ru_utime.tv_sec;
+	tot->ru_utime.tv_usec += cur->ru_utime.tv_usec;
+	tot->ru_stime.tv_sec += cur->ru_stime.tv_sec;
+	tot->ru_stime.tv_usec += cur->ru_stime.tv_usec;
+	tot->ru_nvcsw += cur->ru_nvcsw;	
+	tot->ru_nivcsw += cur->ru_nivcsw;
+	tot->ru_minflt += cur->ru_minflt;
+	tot->ru_majflt += cur->ru_majflt;
+	tot->ru_inblock += cur->ru_inblock;
+	tot->ru_oublock += cur->ru_oublock;
+	if (cur->ru_maxrss > tot->ru_maxrss)
+		tot->ru_maxrss = cur->ru_maxrss;
+}
+
+int getrusage(int who, struct rusage *usage)
+{
+	if (have_bysyscall_pertask_data() &&
+	    bysyscall_pertask_data[bysyscall_pertask_data_idx].rusage_gen) {
+		struct rusage *self, *children;
+		pid_t pid;
+		int i;
+
+		self = &bysyscall_pertask_data[bysyscall_pertask_data_idx].rusage[_RUSAGE_SELF];
+		children = &bysyscall_pertask_data[bysyscall_pertask_data_idx].rusage[_RUSAGE_CHILDREN];
+		switch (who) {
+		case RUSAGE_THREAD:
+			memcpy(usage, self, sizeof(*usage));
+			bysyscall_stats[BYSYSCALL_getrusage]++;
+			return 0;
+		case RUSAGE_SELF:
+			pid = bysyscall_pertask_data[bysyscall_pertask_data_idx].pid;
+			memset(usage, 0, sizeof(*usage));
+			/* collect usage for all threads in task */
+			for (i = 0; i < BYSYSCALL_PERTASK_DATA_CNT; i++) {
+				if (bysyscall_pertask_data[i].pid != pid)
+					continue;
+				addrusage(usage,
+					  &bysyscall_pertask_data[i].rusage[_RUSAGE_SELF]);
+			}
+			bysyscall_stats[BYSYSCALL_getrusage]++;
+			return 0;
+		case RUSAGE_CHILDREN:
+			memcpy(usage, children, sizeof(*usage));
+			bysyscall_stats[BYSYSCALL_getrusage]++;
+			return 0;
+		default:
+			break;
+		}
+	}
+	return ((int (*)(int, struct rusage *))(bysyscall_real_fns[BYSYSCALL_getrusage]))(who, usage);
+}
+
+int __wrap_getrusage(int who, struct rusage *usage)
+{
+	return getrusage(who, usage);
 }

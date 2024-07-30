@@ -31,7 +31,8 @@ LDFLAGS = -L../src
 
 PROGS = getpid \
 	getuid \
-	getgid
+	getgid \
+	getrusage
 
 WRAPS = $(PROGS:%=-Wl,--wrap=%)
 

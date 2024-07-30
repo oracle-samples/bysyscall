@@ -17,10 +17,13 @@
  * Boston, MA 021110-1307, USA.
  */
 
+#define _GNU_SOURCE
 #include <stdio.h>
 #include <stdlib.h>
 #include <errno.h>
 #include <sys/param.h>
+#include <sys/time.h>
+#include <sys/resource.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
@@ -71,6 +74,7 @@ int main(int argc, char *argv[])
 	skel->data->bysyscall_perthread_data_offset = (long)&perthread_data -
 						      (long)pthread_self();
 
+	skel->data->bysyscall_page_size = getpagesize();
 	err = bysyscall_bpf__load(skel);
 	if (err) {
 		fprintf(stderr, "could not load bysyscall object: %d\n", err);

@@ -28,6 +28,12 @@
 
 #define BYSYSCALL_PERTHREAD_OFF_INVAL	-1
 
+enum {
+	_RUSAGE_SELF,
+	_RUSAGE_CHILDREN,
+	_RUSAGE_NUM
+};
+
 struct bysyscall_pertask_data {
 	pid_t	pid;
 	pid_t	tid;
@@ -35,6 +41,8 @@ struct bysyscall_pertask_data {
 	uid_t	euid;
 	gid_t	gid;
 	gid_t	egid;
+	int rusage_gen;
+	struct rusage rusage[_RUSAGE_NUM];
 };
 
 /* a task will map to an idx_data structure; this allows us to

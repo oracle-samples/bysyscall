@@ -25,7 +25,7 @@ test_setup true
 
 for MODE in "" "fork" "pthread" ; do
 
-for PROG in getpid getuid getgid ; do
+for PROG in getpid getuid getgid getrusage ; do
 
 for SUFFIX in "" "_linked" ; do
 
@@ -43,6 +43,15 @@ test_run_cmd_local "./${PROG} $COUNT $MODE" true
 
 test_pass
 
+if [[ -z "$SUFFIX" ]]; then
+	PL=$BYSYSCALL_LD_PRELOAD
+else
+	PL=""
+fi
+
+# skip single test for getrusage as we may not have cached data
+# for first syscall
+if [[ $PROG != "getrusage" ]]; then
 test_start "$0: verify ${PROG}${SUFFIX} match (test$SUFFIX) $MODE"
 
 $BYSYSCALL_CMD
@@ -52,15 +61,11 @@ if [[ ! -d "/sys/fs/bpf/bysyscall" ]]; then
 	test_cleanup
 fi
 
-
-if [[ -z "$SUFFIX" ]]; then
-	PL=$BYSYSCALL_LD_PRELOAD
-else
-	PL=""
-fi
 eval $PL ./${PROG}${SUFFIX} 1 $MODE 2>&1|grep "bypassed"
 
 test_pass
+
+fi
 
 test_start "$0: verify $COUNT $PROG matches (test$SUFFIX) $MODE"
 

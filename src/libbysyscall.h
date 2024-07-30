@@ -16,14 +16,16 @@
  * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
  * Boston, MA 021110-1307, USA.
  */
-
+#include <sys/time.h>
+#include <sys/resource.h>
 #include "bysyscall.h"
 
 /* Add new bysyscalls here */
 #define __BYSYSCALL_MAPPER(FN)	\
 	FN(getpid),		\
 	FN(getuid),		\
-	FN(getgid),
+	FN(getgid),		\
+	FN(getrusage),
 
 
 #define __BYSYSCALL_ENUM_FN(x)	BYSYSCALL_ ## x

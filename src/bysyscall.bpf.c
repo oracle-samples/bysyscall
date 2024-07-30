@@ -24,11 +24,17 @@
 #include <bpf/bpf_tracing.h>
 #include <bpf/bpf_core_read.h>
 
+#define NANOSEC 1000000000L
+
 #define printk	__bpf_printk
 
+/* pertask data will be in skel bss map */
 struct bysyscall_pertask_data bysyscall_pertask_data[BYSYSCALL_PERTASK_DATA_CNT];
 
+/* initialize as non-zero to ensure these will be in skel data */
 long bysyscall_perthread_data_offset = BYSYSCALL_PERTHREAD_OFF_INVAL;
+long bysyscall_page_size = 4096;
+
 static long next_idx = -1;
 
 struct {
@@ -244,16 +250,90 @@ int BPF_PROG(bysyscall_setgid, gid_t gid, long ret)
 	return 0;
 }
 
+#define rusage_val(idx, field) \
+	bysyscall_pertask_data[idx].rusage[_RUSAGE_SELF].field
+
+#define rusage_cval(idx, field) \
+	bysyscall_pertask_data[idx].rusage[_RUSAGE_CHILDREN].field
+
+static __s64 read_mm_stat(struct mm_struct *mm, int idx)
+{
+	return mm->rss_stat[idx & (NR_MM_COUNTERS - 1)].count;
+}
+
+static inline __u64 get_mm_maxrss(struct task_struct *task)
+{
+	struct mm_struct *mm = task->mm;
+	__u64 mm_tot = 0;
+
+	if (!mm)
+		return 0;
+	mm_tot = read_mm_stat(mm, MM_FILEPAGES);
+	mm_tot += read_mm_stat(mm, MM_ANONPAGES);
+	mm_tot += read_mm_stat(mm, MM_SHMEMPAGES);
+	if (mm_tot > mm->hiwater_rss)
+		return mm_tot;
+	return mm->hiwater_rss;
+}
+
+static inline __u64 get_maxrss(__u64 maxrss, __u64 mm_maxrss)
+{
+	if (mm_maxrss > maxrss)
+		maxrss = mm_maxrss;
+	return maxrss * bysyscall_page_size / 1024;
+}
+
 SEC("fexit/update_process_times")
 int BPF_PROG(update_process_times, int user_tick, int ret)
 {
 	struct task_struct *task = bpf_get_current_task_btf();
-	int pid, tgid;
+	struct bysyscall_idx_data *idxval;
+	__u64 utime = 0, stime = 0;
+	struct signal_struct *sig;
+	int pid, tgid, idx = 0;
+	__u64 mm_maxrss;
 
 	if (task == NULL)
 		return 0;
 
 	pid = task->pid;
+	idxval = bpf_map_lookup_elem(&bysyscall_pertask_idx_hash, &pid);
+	if (!idxval)
+		return 0;
+	idx = idxval->value & (BYSYSCALL_PERTASK_DATA_CNT - 1);
+
+	sig = task->signal;
+	if (!sig)
+		return 0;
+
+	__sync_fetch_and_add(&bysyscall_pertask_data[idx].rusage_gen, 1);
+	mm_maxrss = get_mm_maxrss(task);
+	utime = task->utime;
+	stime = task->stime;
+	rusage_val(idx, ru_utime).tv_sec = utime / NANOSEC;
+	rusage_val(idx, ru_utime).tv_usec = (utime % NANOSEC)/1000;
+	rusage_val(idx, ru_stime).tv_sec = stime / NANOSEC;
+	rusage_val(idx, ru_stime).tv_usec = (stime % NANOSEC)/1000;
+	rusage_val(idx, ru_nvcsw) = sig->nvcsw + task->nvcsw;
+	rusage_val(idx, ru_nivcsw) = sig->nivcsw + task->nivcsw;
+	rusage_val(idx, ru_minflt) = sig->min_flt + task->min_flt;
+	rusage_val(idx, ru_majflt) = sig->maj_flt + task->maj_flt;
+	rusage_val(idx, ru_inblock) = sig->inblock;
+	rusage_val(idx, ru_oublock) = sig->oublock;
+	rusage_val(idx, ru_maxrss) = get_maxrss(sig->maxrss, mm_maxrss);
+	utime = sig->cutime;
+	stime = sig->cstime;
+	rusage_cval(idx, ru_utime).tv_sec = utime / NANOSEC;
+	rusage_cval(idx, ru_utime).tv_usec = (utime % NANOSEC)/1000;
+	rusage_cval(idx, ru_stime).tv_sec = stime / NANOSEC;
+	rusage_cval(idx, ru_stime).tv_usec = (stime % NANOSEC)/1000;
+	rusage_cval(idx, ru_nvcsw) = sig->cnvcsw;
+	rusage_cval(idx, ru_nivcsw) = sig->cnivcsw;
+	rusage_cval(idx, ru_minflt) = sig->cmin_flt;
+	rusage_cval(idx, ru_majflt) = sig->cmaj_flt;
+	rusage_cval(idx, ru_inblock) = sig->cinblock;
+	rusage_cval(idx, ru_oublock) = sig->coublock;
+	rusage_cval(idx, ru_maxrss) = sig->cmaxrss;
 
 	return 0;
 }

@@ -90,15 +90,15 @@ perthread array index <========================== BPF programs write per-thread
 
 # Why is this needed?
 
-With the approach of using an LD_PRELOAD library, a reasonable question
+With the approach of using an `LD_PRELOAD` library, a reasonable question
 is why use BPF at all? We could just cache the relevant values like
 pid, uid etc.
 
 This is where BPF comes in - by attaching BPF programs to the
 right places, we can update our cached values when things change
-(e.g. a setuid() call changing the uid, a process fork etc).
+(e.g. a `setuid()` call changing the uid, a process fork etc).
 
-In addition some system calls like getrusage() are not amenable to
+In addition some system calls like `getrusage()` are not amenable to
 caching as their values keep changing.
 
 Finally we see in the `pthread_create()` case that BPF instrumentation
@@ -161,6 +161,7 @@ Per-task bysyscall wrappers are provided for
 - `getpid()`
 - `getuid()`
 - `getgid()`
+- `getrusage()`
 
 # Example usage
 
