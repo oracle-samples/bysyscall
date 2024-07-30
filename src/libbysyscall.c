@@ -242,6 +242,13 @@ int getrusage(int who, struct rusage *usage)
 			return 0;
 		case RUSAGE_SELF:
 			pid = bysyscall_pertask_data[bysyscall_pertask_data_idx].pid;
+			/* fastpath for single-threaded tasks */
+			if (pid == bysyscall_pertask_data[bysyscall_pertask_data_idx].tid &&
+			    bysyscall_pertask_data[bysyscall_pertask_data_idx].child_threads == 0) {
+				memcpy(usage, self, sizeof(*usage));
+				bysyscall_stats[BYSYSCALL_getrusage]++;
+				return 0;
+			}
 			memset(usage, 0, sizeof(*usage));
 			/* collect usage for all threads in task */
 			for (i = 0; i < BYSYSCALL_PERTASK_DATA_CNT; i++) {

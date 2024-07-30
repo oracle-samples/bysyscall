@@ -54,6 +54,8 @@ struct {
  * - if present, write it to the USDT caller context via bpf_probe_write_user()
  *
  * Now the user can use that index to look up the appropriate values.
+ *
+ * Returns index used for task, -1 on error.
  */
 static __always_inline int do_bysyscall_init(struct task_struct *task, int *pertask_idx)
 {
@@ -63,7 +65,7 @@ static __always_inline int do_bysyscall_init(struct task_struct *task, int *pert
 	int idx = 0;
 
 	if (!task)
-		return 0;
+		return -1;
 	pid = task->pid;
 
 	idxval = bpf_map_lookup_elem(&bysyscall_pertask_idx_hash, &pid);
@@ -74,11 +76,11 @@ static __always_inline int do_bysyscall_init(struct task_struct *task, int *pert
 		d.value = ++next_idx;
 
 		if (bpf_map_update_elem(&bysyscall_pertask_idx_hash, &pid, &d, BPF_ANY))
-			return 0;
+			return -1;
 		idxval = bpf_map_lookup_elem(&bysyscall_pertask_idx_hash, &pid);
 	}
 	if (!idxval || bysyscall_idx_in_use(idxval))
-		return 0;
+		return -1;
 	idxval->flags |= BYSYSCALL_IDX_IN_USE;
 	idx = idxval->value & (BYSYSCALL_PERTASK_DATA_CNT - 1);
 	bysyscall_pertask_data[idx].pid = task->tgid;
@@ -93,11 +95,11 @@ static __always_inline int do_bysyscall_init(struct task_struct *task, int *pert
 		if (ret) {
 			printk("bpf_probe_write_user (to 0x%lx) returned %d\n",
 			       pertask_idx, ret);
-			return 0;
+			return idx;
 		}
 	}
 	newidxval = idxval;	
-	return 0;
+	return idx;
 }
 
 SEC("uprobe/libbysyscall.so:__bysyscall_init")
@@ -108,7 +110,9 @@ int BPF_UPROBE(bysyscall_init, int *pertask_idx)
 	if (!task)
 		return 0;
 
-	return do_bysyscall_init(task, pertask_idx);
+	do_bysyscall_init(task, pertask_idx);
+
+	return 0;
 }
 
 static __always_inline int do_bysyscall_fini(void)
@@ -142,6 +146,7 @@ int BPF_UPROBE(bysyscall_start_thread, void *arg)
 	struct bysyscall_idx_data *idxval;
 	int pid;
 	int *pertask_idx = NULL;
+	int idx;
 
 	task = bpf_get_current_task_btf();
 	if (!task)
@@ -154,7 +159,13 @@ int BPF_UPROBE(bysyscall_start_thread, void *arg)
 	if (bysyscall_perthread_data_offset == BYSYSCALL_PERTHREAD_OFF_INVAL)
 		return 0;
 	pertask_idx = (int *)(arg + bysyscall_perthread_data_offset);
-	return do_bysyscall_init(task, pertask_idx);
+	idx = do_bysyscall_init(task, pertask_idx);
+	if (idx < 0)
+		return 0;
+	idx = idx & (BYSYSCALL_PERTASK_DATA_CNT - 1);
+	/* this task has multiple threads */
+	__sync_fetch_and_add(&bysyscall_pertask_data[idx].child_threads, 1);
+	return 0;
 }
 
 /* Assign a new index, cached data on fork() success, update the index in
@@ -182,7 +193,8 @@ int BPF_URETPROBE(bysyscall_fork_return, pid_t ret)
 	idxval = bpf_map_lookup_elem(&bysyscall_pertask_idx_hash, &ppid);
 	if (!idxval)
 		return 0;
-	return do_bysyscall_init(task, idxval->ptr);
+	do_bysyscall_init(task, idxval->ptr);
+	return 0;
 }
 
 /* Catch explicit library cleanup to free bysyscall array index for re-use */

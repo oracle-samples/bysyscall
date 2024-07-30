@@ -44,9 +44,9 @@ test_run_cmd_local "./${PROG} $COUNT $MODE" true
 test_pass
 
 if [[ -z "$SUFFIX" ]]; then
-	PL=$BYSYSCALL_LD_PRELOAD
+	PL="BYSYSCALL_LOG=info $BYSYSCALL_LD_PRELOAD"
 else
-	PL=""
+	PL="BYSYSCALL_LOG=info"
 fi
 
 # skip single test for getrusage as we may not have cached data
@@ -75,7 +75,7 @@ test_pass
 
 test_start "$0: verify $COUNT $PROG matches (test$SUFFIX, user $BPFUSER) $MODE"
 
-sudo -u $BPFUSER $PL BYSYSCALL_LOG=info $PL ./${PROG}${SUFFIX} $COUNT 2>&1 |\
+sudo -u $BPFUSER $PL $PL ./${PROG}${SUFFIX} $COUNT 2>&1 |\
         grep "bypassed"
 
 test_pass

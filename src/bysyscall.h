@@ -41,6 +41,7 @@ struct bysyscall_pertask_data {
 	uid_t	euid;
 	gid_t	gid;
 	gid_t	egid;
+	int child_threads;
 	int rusage_gen;
 	struct rusage rusage[_RUSAGE_NUM];
 };
