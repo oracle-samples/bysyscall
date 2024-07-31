@@ -60,19 +60,19 @@ if [[ -z "$SUFFIX" ]]; then
 else
 	PL=""
 fi
-eval $PL ./${PROG}${SUFFIX} 1 $MODE 2>&1|grep "bypassed"
+eval $PL ./${PROG}${SUFFIX} 1 $MODE |grep "bypassed"
 
 test_pass
 
 test_start "$0: verify $COUNT $PROG matches when setting $USERID (test$SUFFIX) $MODE"
 
-eval $PL ./${PROG}${SUFFIX} $COUNT $MODE 2>&1|grep "bypassed"
+eval $PL ./${PROG}${SUFFIX} $COUNT $MODE |grep "bypassed"
 
 test_pass
 
 test_start "$0: verify $COUNT $PROG matches when setting $USERID (test$SUFFIX, user $BPFUSER) $MODE"
 
-sudo -u $BPFUSER $PL BYSYSCALL_LOG=info $PL ./${PROG}${SUFFIX} $COUNT 2>&1 |\
+sudo -u $BPFUSER $PL BYSYSCALL_LOG=info $PL ./${PROG}${SUFFIX} $COUNT |\
         grep "bypassed"
 
 test_pass

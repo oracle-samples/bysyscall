@@ -61,7 +61,7 @@ if [[ ! -d "/sys/fs/bpf/bysyscall" ]]; then
 	test_cleanup
 fi
 
-eval $PL ./${PROG}${SUFFIX} 1 $MODE 2>&1|grep "bypassed"
+eval $PL ./${PROG}${SUFFIX} 1 $MODE |grep "bypassed"
 
 test_pass
 
@@ -69,14 +69,13 @@ fi
 
 test_start "$0: verify $COUNT $PROG matches (test$SUFFIX) $MODE"
 
-eval $PL ./${PROG}${SUFFIX} $COUNT $MODE 2>&1|grep "bypassed"
+eval $PL ./${PROG}${SUFFIX} $COUNT $MODE |grep "bypassed"
 
 test_pass
 
 test_start "$0: verify $COUNT $PROG matches (test$SUFFIX, user $BPFUSER) $MODE"
 
-sudo -u $BPFUSER $PL $PL ./${PROG}${SUFFIX} $COUNT 2>&1 |\
-        grep "bypassed"
+sudo -u $BPFUSER $PL ./${PROG}${SUFFIX} $COUNT $MODE | grep "bypassed"
 
 test_pass
 

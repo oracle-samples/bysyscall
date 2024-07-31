@@ -94,9 +94,9 @@ int main(int argc, char *argv[])
 	return ret;
 }
 
-static void printrusage(const char *name, struct rusage *usage)
+static void printrusage(const char *name, struct rusage *usage, int force)
 {
-	if (!verbose)
+	if (!verbose && !force)
 		return;
 
 	printf("%s.utime = %ld.%ld\n", name, usage->ru_utime.tv_sec, usage->ru_utime.tv_usec);
@@ -144,47 +144,47 @@ static void *runtest(void *data)
 		fprintf(stderr, "RUSAGE_SELF (syscall) failed: %d\n", *ret);
 		return NULL;
 	}
-	printrusage("syscall_self", &srself);
+	printrusage("syscall_self", &srself, 0);
 	*ret = syscall(__NR_getrusage, RUSAGE_CHILDREN, &srchildren);
 	if (*ret) {
 		fprintf(stderr, "RUSAGE_CHILDREN (syscall) failed: %d\n", *ret);
+		printrusage("syscall_self", &srself, 1);
 		return NULL;
         }
-	printrusage("syscall_children", &srchildren);
+	printrusage("syscall_children", &srchildren, 0);
 	*ret = syscall(__NR_getrusage, RUSAGE_THREAD, &srthread);
 	if (*ret) {
 		fprintf(stderr, "RUSAGE_THREAD (syscall) failed: %d\n", *ret);
 		return NULL;
 	}
-	printrusage("syscall_thread", &srthread);
+	printrusage("syscall_thread", &srthread, 0);
 
 	for (i = 0; i < count; i++) {
 		*ret = getrusage(RUSAGE_SELF, &rself);
-		if (!*ret) {
-			printrusage("self", &rself);
+		if (!*ret)
 			*ret = checkrusage(&srself, &rself);
-		}
+		printrusage("self", &rself, *ret != 0);
 		if (*ret) {
 			fprintf(stderr, "RUSAGE_SELF failed: %d\n", *ret);
 			return NULL;
 		}
 		*ret = getrusage(RUSAGE_CHILDREN, &rchildren);
+		printrusage("children", &rchildren, *ret != 0);
 		if (*ret) {
 			fprintf(stderr, "RUSAGE_CHILDREN failed %d\n", *ret);
 			return NULL;
 		}
-		printrusage("children", &rchildren);
 		*ret = getrusage(RUSAGE_THREAD, &rthread);
 		if (!*ret) {
-			printrusage("thread", &rthread);
 			*ret = checkrusage(&srthread, &rthread);
 		}
+		printrusage("thread", &rthread, *ret != 0);
 		if (*ret) {
 			fprintf(stderr, "RUSAGE_THREAD failed %d\n", *ret);
 			return NULL;
 		}
 	}
-	printf("getrusage() calls succeeded\n");
+	printf("%d getrusage() calls succeeded\n", 3*count);
 	*ret = 0;
 	return NULL;
 }

@@ -62,7 +62,7 @@ void bysyscall_log(int level, const char *fmt, ...)
 		va_list args;
 
 		va_start(args, fmt);
-		vfprintf(stderr, fmt, args);
+		vfprintf(level <= LOG_WARNING ? stderr : stdout, fmt, args);
 		va_end(args);
 	}
 }

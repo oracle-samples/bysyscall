@@ -318,7 +318,6 @@ int BPF_PROG(update_process_times, int user_tick, int ret)
 	if (!sig)
 		return 0;
 
-	__sync_fetch_and_add(&bysyscall_pertask_data[idx].rusage_gen, 1);
 	mm_maxrss = get_mm_maxrss(task);
 	utime = task->utime;
 	stime = task->stime;
@@ -346,6 +345,7 @@ int BPF_PROG(update_process_times, int user_tick, int ret)
 	rusage_cval(idx, ru_inblock) = sig->cinblock;
 	rusage_cval(idx, ru_oublock) = sig->coublock;
 	rusage_cval(idx, ru_maxrss) = sig->cmaxrss;
+	__sync_fetch_and_add(&bysyscall_pertask_data[idx].rusage_gen, 1);
 
 	return 0;
 }
