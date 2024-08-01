@@ -29,7 +29,7 @@
 #define printk	__bpf_printk
 
 /* pertask data will be in skel bss map */
-struct bysyscall_pertask_data bysyscall_pertask_data[BYSYSCALL_PERTASK_DATA_CNT];
+volatile struct bysyscall_pertask_data bysyscall_pertask_data[BYSYSCALL_PERTASK_DATA_CNT];
 
 /* initialize as non-zero to ensure these will be in skel data */
 long bysyscall_perthread_data_offset = BYSYSCALL_PERTHREAD_OFF_INVAL;
@@ -262,11 +262,11 @@ int BPF_PROG(bysyscall_setgid, gid_t gid, long ret)
 	return 0;
 }
 
-#define rusage_val(idx, field) \
-	bysyscall_pertask_data[idx].rusage[_RUSAGE_SELF].field
+#define update_rusage_val(idx, field, val) \
+	__sync_val_compare_and_swap(&bysyscall_pertask_data[idx].rusage[_RUSAGE_SELF].field, 0, val)
 
-#define rusage_cval(idx, field) \
-	bysyscall_pertask_data[idx].rusage[_RUSAGE_CHILDREN].field
+#define update_rusage_cval(idx, field, val) \
+	__sync_val_compare_and_swap(&bysyscall_pertask_data[idx].rusage[_RUSAGE_CHILDREN].field, 0, val)
 
 static __s64 read_mm_stat(struct mm_struct *mm, int idx)
 {
@@ -321,32 +321,33 @@ int BPF_PROG(update_process_times, int user_tick, int ret)
 	mm_maxrss = get_mm_maxrss(task);
 	utime = task->utime;
 	stime = task->stime;
-	rusage_val(idx, ru_utime).tv_sec = utime / NANOSEC;
-	rusage_val(idx, ru_utime).tv_usec = (utime % NANOSEC)/1000;
-	rusage_val(idx, ru_stime).tv_sec = stime / NANOSEC;
-	rusage_val(idx, ru_stime).tv_usec = (stime % NANOSEC)/1000;
-	rusage_val(idx, ru_nvcsw) = sig->nvcsw + task->nvcsw;
-	rusage_val(idx, ru_nivcsw) = sig->nivcsw + task->nivcsw;
-	rusage_val(idx, ru_minflt) = sig->min_flt + task->min_flt;
-	rusage_val(idx, ru_majflt) = sig->maj_flt + task->maj_flt;
-	rusage_val(idx, ru_inblock) = sig->inblock;
-	rusage_val(idx, ru_oublock) = sig->oublock;
-	rusage_val(idx, ru_maxrss) = get_maxrss(sig->maxrss, mm_maxrss);
+	update_rusage_val(idx, ru_utime.tv_sec, utime / NANOSEC);
+	update_rusage_val(idx, ru_utime.tv_usec, (utime % NANOSEC)/1000);
+	update_rusage_val(idx, ru_stime.tv_sec, stime / NANOSEC);
+	update_rusage_val(idx, ru_stime.tv_usec, (stime % NANOSEC)/1000);
+	update_rusage_val(idx, ru_nvcsw, sig->nvcsw + task->nvcsw);
+	update_rusage_val(idx, ru_nivcsw, sig->nivcsw + task->nivcsw);
+	update_rusage_val(idx, ru_minflt, sig->min_flt + task->min_flt);
+	update_rusage_val(idx, ru_majflt, sig->maj_flt + task->maj_flt);
+	update_rusage_val(idx, ru_inblock, sig->inblock);
+	update_rusage_val(idx, ru_oublock, sig->oublock);
+	update_rusage_val(idx, ru_maxrss, get_maxrss(sig->maxrss, mm_maxrss));
 	utime = sig->cutime;
 	stime = sig->cstime;
-	rusage_cval(idx, ru_utime).tv_sec = utime / NANOSEC;
-	rusage_cval(idx, ru_utime).tv_usec = (utime % NANOSEC)/1000;
-	rusage_cval(idx, ru_stime).tv_sec = stime / NANOSEC;
-	rusage_cval(idx, ru_stime).tv_usec = (stime % NANOSEC)/1000;
-	rusage_cval(idx, ru_nvcsw) = sig->cnvcsw;
-	rusage_cval(idx, ru_nivcsw) = sig->cnivcsw;
-	rusage_cval(idx, ru_minflt) = sig->cmin_flt;
-	rusage_cval(idx, ru_majflt) = sig->cmaj_flt;
-	rusage_cval(idx, ru_inblock) = sig->cinblock;
-	rusage_cval(idx, ru_oublock) = sig->coublock;
-	rusage_cval(idx, ru_maxrss) = sig->cmaxrss;
+	update_rusage_cval(idx, ru_utime.tv_sec, utime / NANOSEC);
+	update_rusage_cval(idx, ru_utime.tv_usec, (utime % NANOSEC)/1000);
+	update_rusage_cval(idx, ru_stime.tv_sec, stime / NANOSEC);
+	update_rusage_cval(idx, ru_stime.tv_usec, (stime % NANOSEC)/1000);
+	update_rusage_cval(idx, ru_nvcsw, sig->cnvcsw);
+	update_rusage_cval(idx, ru_nivcsw, sig->cnivcsw);
+	update_rusage_cval(idx, ru_minflt, sig->cmin_flt);
+	update_rusage_cval(idx, ru_majflt, sig->cmaj_flt);
+	update_rusage_cval(idx, ru_inblock, sig->cinblock);
+	update_rusage_cval(idx, ru_oublock, sig->coublock);
+	update_rusage_cval(idx, ru_maxrss, sig->cmaxrss);
 	__sync_fetch_and_add(&bysyscall_pertask_data[idx].rusage_gen, 1);
 
+	asm volatile ("" ::: "memory");
 	return 0;
 }
 

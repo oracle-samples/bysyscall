@@ -67,9 +67,12 @@ int main(int argc, char *argv[])
 			} else {
 				return status;
 			}
-		}
-		if (newpid < 0)
+		} else if (newpid < 0) {
 			exit(newpid);
+		} else {
+			sleep(1);
+			exit(0);
+		}
 	}
 
 	ret = count;
@@ -96,18 +99,20 @@ int main(int argc, char *argv[])
 
 static void printrusage(const char *name, struct rusage *usage, int force)
 {
+	FILE *targ = force ? stderr : stdout;
+
 	if (!verbose && !force)
 		return;
 
-	printf("%s.utime = %ld.%ld\n", name, usage->ru_utime.tv_sec, usage->ru_utime.tv_usec);
-	printf("%s.stime = %ld.%ld\n", name, usage->ru_stime.tv_sec, usage->ru_stime.tv_usec);
-	printf("%s.maxrss = %ld\n", name, usage->ru_maxrss);
-	printf("%s.minflt = %ld\n", name, usage->ru_minflt);
-	printf("%s.majflt = %ld\n", name, usage->ru_majflt);
-	printf("%s.inblock = %ld\n", name, usage->ru_inblock);
-	printf("%s.oublock = %ld\n", name, usage->ru_oublock);
-	printf("%s.nvcsw = %ld\n", name, usage->ru_nvcsw);
-	printf("%s.nivcsw = %ld\n", name, usage->ru_nivcsw);
+	fprintf(targ, "%s.utime = %ld.%ld\n", name, usage->ru_utime.tv_sec, usage->ru_utime.tv_usec);
+	fprintf(targ, "%s.stime = %ld.%ld\n", name, usage->ru_stime.tv_sec, usage->ru_stime.tv_usec);
+	fprintf(targ, "%s.maxrss = %ld\n", name, usage->ru_maxrss);
+	fprintf(targ, "%s.minflt = %ld\n", name, usage->ru_minflt);
+	fprintf(targ, "%s.majflt = %ld\n", name, usage->ru_majflt);
+	fprintf(targ, "%s.inblock = %ld\n", name, usage->ru_inblock);
+	fprintf(targ, "%s.oublock = %ld\n", name, usage->ru_oublock);
+	fprintf(targ, "%s.nvcsw = %ld\n", name, usage->ru_nvcsw);
+	fprintf(targ, "%s.nivcsw = %ld\n", name, usage->ru_nivcsw);
 }
   
 #define ASSERT_RUSAGE_VAL(s, r, field)					\
@@ -165,13 +170,15 @@ static void *runtest(void *data)
 			*ret = checkrusage(&srself, &rself);
 		printrusage("self", &rself, *ret != 0);
 		if (*ret) {
-			fprintf(stderr, "RUSAGE_SELF failed: %d\n", *ret);
+			fprintf(stderr, "RUSAGE_SELF failed (iter %d): %d\n", i, *ret);
+			printrusage("syscall_self", &srself, 1);
 			return NULL;
 		}
 		*ret = getrusage(RUSAGE_CHILDREN, &rchildren);
 		printrusage("children", &rchildren, *ret != 0);
 		if (*ret) {
-			fprintf(stderr, "RUSAGE_CHILDREN failed %d\n", *ret);
+			fprintf(stderr, "RUSAGE_CHILDREN failed (iter %d) %d\n", i, *ret);
+			printrusage("syscall_children", &srchildren, 1);
 			return NULL;
 		}
 		*ret = getrusage(RUSAGE_THREAD, &rthread);
@@ -180,7 +187,8 @@ static void *runtest(void *data)
 		}
 		printrusage("thread", &rthread, *ret != 0);
 		if (*ret) {
-			fprintf(stderr, "RUSAGE_THREAD failed %d\n", *ret);
+			fprintf(stderr, "RUSAGE_THREAD failed (iter %d) %d\n", i, *ret);
+			printrusage("syscall_thread", &srthread, 1);
 			return NULL;
 		}
 	}
