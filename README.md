@@ -3,14 +3,13 @@
 In a post-SPECTRE/Meltdown world, the cost of system calls is high.
 We have techniques like vDSO/vsyscall to mitigate system call overheads -
 these operate on the basis that the cheapest system call is the one you do
-not have to make. However there are limitations with vDSO techniques -
-one instructive example is `getpid()`.
+not have to make. However there are limitations with vDSO and caching
+techniques - one instructive example is `getpid()`.
 
-`getpid()` support is complex because the value must be right but a cached
-value can be invalidated by events such as `fork()`ing a new process,
-or entering a pid namespace.
+`getpid()` support is complex because the value must be right, but a cached
+value can be invalidated by events such as `fork()`ing a new process.
 
-As a result support for `getpid()` was removed from vDSO [1], but it is
+As a result glibc caching support for `getpid()` was removed [1], but it is
 wanted - see [2].
 
 It seems timely to ask - can BPF help here? It can do many of the things
@@ -31,7 +30,7 @@ With this approach in mind, we can create
 functions which consult these memory-mapped values, falling back to the
 libc functions if this fails.
 
-- a user-space service and associated program (bysyscall) is responsible
+- a user-space service and associated program (bysyscall), responsible
 for launching BPF programs to help populate cache values and update them
 in response to events.
 
@@ -53,7 +52,7 @@ wrappers can use that index to retrieve per-task data from the
 memory-mapped array.
 
 When a process that is using bysyscall calls `fork()`, we instrument
-the fork() return for the child process (where the return value is 0).
+the `fork()` return for the child process (where the return value is 0).
 In this case, we check if the parent process is indeed using bysyscall
 (it has an index map entry), and if it does we populate the newly-created
 process array map values and update the index to point at that task.
@@ -116,7 +115,6 @@ $ make ; sudo make install
 To build, the following packages are needed (names may vary by distro);
 
 - libbpf, libbpf-devel >= 1
-- libcap-devel
 - bpftool >= 4.18
 - clang >= 11
 - llvm >= 11
@@ -195,7 +193,7 @@ sys	0m0.001s
 
 ```
 
-It took less than 1/10 of a second this time.  Note the sys time;
+It took less than 1/10 of a second this time.  Note the `sys` time;
 for the baseline case it was 0.667 seconds, for the test case it was
 0.001 seconds, indicating much less time in-kernel.
 
