@@ -197,8 +197,45 @@ It took less than 1/10 of a second this time.  Note the `sys` time;
 for the baseline case it was 0.667 seconds, for the test case it was
 0.001 seconds, indicating much less time in-kernel.
 
-We can try the same with other programs.  If we set BYSYSCALL_LOG=info,
-libbysyscall will log additional info about how many times bypass occurred:
+Investigating with DTrace, let's compare running a version of
+getpid linked with libbyscall (`getpid_linked`) versus a version using
+libc only.  Baseline first:
+
+```
+# dtrace -n 'syscall:::entry /pid ==$target/{@c[probefunc] = count(); }' -c './getpid 1000'
+dtrace: description 'syscall:::entry ' matched 343 probes
+1000 pid from getpid() (2063846) matches pid from syscall (2063846)
+
+  exit_group                                                        1
+  getrandom                                                         1
+  newfstat                                                          1
+  write                                                             1
+  brk                                                               3
+  getpid                                                         1001
+```
+
+So, as expected we see ~1000 `getpid()` system calls.  Now with the
+libbysyscall-linked version:
+
+```
+# dtrace -n 'syscall:::entry /pid ==$target/{@c[probefunc] = count(); }' -c './getpid_linked 1000'
+dtrace: description 'syscall:::entry ' matched 343 probes
+1000 pid from getpid() (2063997) matches pid from syscall (2063997)
+
+  exit_group                                                        1
+  getpid                                                            1
+  getrandom                                                         1
+  newfstat                                                          1
+  write                                                             1
+  brk                                                               3
+```
+
+Only 1 getpid() system call is done!  So we can see the difference in
+terms of syscall overhead can be significant.
+
+We can try using `LD_PRELOAD=/usr/lib64/libbysyscall.so` with other programs.
+If we set `BYSYSCALL_LOG=info`, libbysyscall will log additional info on
+how many times bypass occurred:
 
 ```
 $ BYSYSCALL_LOG=info LD_PRELOAD=/usr/lib64/libbysyscall.so /usr/bin/python3
