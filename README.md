@@ -40,13 +40,13 @@ from the BPF side.  These are then pinned and the program exits. As a
 result there is nothing running in userspace aside from the `LD_PRELOAD`ed
 library to support syscall bypass.
 
-On the BPF side, a hash map is used to map from a pid to an index in
+On the BPF side, a hash map is used to map from a thread tid to an index in
 the memory-mapped array of per-task data.  When the user loads the
 libbysyscall library, the init function finds and `mmap()`s the pinned
 array map of per-task data.  It then calls `__bysyscall_init()` with
 a pointer to a per-thread integer index into the array map.
 
-The BPF program instrumenting that function calls bpf_probe_write()
+The BPF program instrumenting that function calls bpf_probe_write_user()
 to write the relevant index and from then on callers of system call
 wrappers can use that index to retrieve per-task data from the
 memory-mapped array.
@@ -57,7 +57,7 @@ In this case, we check if the parent process is indeed using bysyscall
 (it has an index map entry), and if it does we populate the newly-created
 process array map values and update the index to point at that task.
 
-`pthread_create()` is similar.  We here instrument the libpthread
+`pthread_create()` is similar.  We instrument libpthread's
 `start_thread()` function and dynamically compute the offset of
 the per-thread variable holding the array map index; it is
 found relative to the `pthread_t` argument to `start_thread()`.
@@ -230,8 +230,9 @@ dtrace: description 'syscall:::entry ' matched 343 probes
   brk                                                               3
 ```
 
-Only 1 getpid() system call is done!  So we can see the difference in
-terms of syscall overhead can be significant.
+Only 1 getpid() system call is done!  (This is done deliberately bypassing
+the getpid() wrapper to check that the values we retrieve are correct).
+So we can see the difference in terms of syscall overhead can be significant.
 
 We can try using `LD_PRELOAD=/usr/lib64/libbysyscall.so` with other programs.
 If we set `BYSYSCALL_LOG=info`, libbysyscall will log additional info on
