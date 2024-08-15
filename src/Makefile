@@ -32,6 +32,12 @@ LDLIBS := -ldl -lbpf
 
 VMLINUX_BTF_PATH := /sys/kernel/btf/vmlinux
 
+OPATH :=
+ifeq ($(SANITIZE),1)
+CFLAGS += -fsanitize=address
+OPATH := .sanitize/
+endif
+
 ifeq ($(V),1)
 Q =
 else
@@ -47,8 +53,11 @@ endif
 PROG := bysyscall
 LIB := lib$(PROG)
 
-all: $(PROG) $(LIB)
+all: analyze $(PROG) $(LIB)
 	
+analyze: bysyscall.skel.h
+	$(CLANG) --analyze $(INCLUDES) $(LIB).c $(PROG).c
+
 clean:
 	$(call QUIET_CLEAN, $(PROG))
 	$(Q)$(RM) *.o $(PROG) $(LIB).so
