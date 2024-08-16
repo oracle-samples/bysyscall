@@ -27,6 +27,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
+#include <ftw.h>
 #include <signal.h>
 #include <unistd.h>
 #include <pthread.h>
@@ -37,14 +38,25 @@
 
 struct bysyscall_bpf *skel = NULL;
 
-bool exiting = false;
-
-static void cleanup(int sig)
+static int unlink_cb(const char *path,
+		     __attribute__((unused))const struct stat *s,
+		     __attribute__((unused))int flag,
+		     __attribute__((unused))struct FTW *f)
 {
-	if (sig)
-		exiting = true;
+	remove(path);
+	return 0;
+}
+
+static void rmpin(const char *path)
+{
+	nftw(path, unlink_cb, 64, FTW_DEPTH | FTW_PHYS);
+	unlink(path);
+}
+
+static void cleanup(__attribute__((unused))int sig)
+{
 	bysyscall_bpf__destroy(skel);
-	system("rm -fr " BYSYSCALL_PINDIR);
+	rmpin(BYSYSCALL_PINDIR);
 }
 
 __thread int perthread_data;
@@ -103,6 +115,7 @@ int main(int argc, char *argv[])
 		fprintf(stderr, "could not pin bsyscall progs/maps to '%s': %s\n",
 			BYSYSCALL_PINDIR, strerror(errno));
 		err = 1;
+		goto done;
 	}
 	links = (struct bpf_link **)&skel->links;
 	for (i = 0; i < sizeof(skel->links)/sizeof(struct bpf_link *); i++) {

@@ -133,10 +133,10 @@ to launch your program (once the bysyscall service has been started)
 ```
 $ service bysyscall start
 
-$ LD_PRELOAD=/usr/lib64/libbsyscall.so myprogram
+$ LD_PRELOAD=/usr/lib64/libbysyscall.so myprogram
 ```
 
-When a program is launched this way, libybsyscall's replacement library
+When a program is launched this way, libbysyscall's replacement library
 wrapper functions will be run, avoiding system calls where possible.
 
 Alternatively, you can build your program linking -lbysyscall.  If doing
