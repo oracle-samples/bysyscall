@@ -1,4 +1,4 @@
-# Contributing to bpftune
+# Contributing to bysyscall
 
 We welcome your contributions! There are multiple ways to contribute.
 
