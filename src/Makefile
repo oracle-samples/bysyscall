@@ -100,4 +100,3 @@ $(PROG).bpf.o: $(PROG).bpf.c vmlinux.h
 vmlinux.h:
 	$(QUIET_GEN)$(BPFTOOL) btf dump file $(VMLINUX_BTF_PATH) format c > $@
 
-

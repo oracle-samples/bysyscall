@@ -55,4 +55,6 @@ the `function()`, add `__wrap_function()` since the latter is needed
 for dynamic linking; `__wrap_function()` should simply call `function()`.
 
 Also add tests to tests/ to check your syscall wrapper override works and
-matches the results from the syscall itself.
+matches the results from the syscall itself, and verify no regressions
+are introduced.
+

@@ -32,6 +32,8 @@ DESCRIPTION
         associated library init function is traced such that the
         required data is mmap()ed into the process.
 
+        **bysyscall stop** will remove pinned programs/maps.
+
 OPTIONS
 =======
         start      
