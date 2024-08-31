@@ -157,9 +157,13 @@ options.
 Per-task bysyscall wrappers are provided for
 
 - `getpid()`
+- `gettid()`
 - `getuid()`
 - `getgid()`
 - `getrusage()`
+
+Note that many libcs do not have a gettid() syscall wrapper, so in that
+case there is nothing to override.
 
 # Example usage
 

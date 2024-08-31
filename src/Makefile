@@ -22,6 +22,7 @@ INSTALL ?= install
 CFLAGS = -fPIC -Wall -Wextra -march=native -g -std=c99
 
 FNS =	getpid \
+	gettid \
 	getuid \
 	getgid \
 	fork

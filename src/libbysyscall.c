@@ -180,6 +180,22 @@ pid_t __wrap_getpid(void)
 	return getpid();
 }
 
+pid_t gettid(void)
+{
+	if (have_bysyscall_pertask_data()) {
+		bysyscall_stats[BYSYSCALL_gettid]++;
+		return bysyscall_pertask_data[bysyscall_pertask_data_idx].tid;
+	}
+	if (!bysyscall_real_fns[BYSYSCALL_gettid])
+		return (pid_t)syscall(__NR_gettid);
+	return ((pid_t (*)())bysyscall_real_fns[BYSYSCALL_gettid])();
+}
+
+pid_t __wrap_gettid(void)
+{
+	return gettid();
+}
+
 uid_t getuid(void)
 {
 	if (have_bysyscall_pertask_data()) {

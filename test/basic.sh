@@ -25,24 +25,30 @@ test_setup true
 
 for MODE in "" "fork" "pthread" ; do
 
-for PROG in getpid getuid getgid getrusage ; do
+for PROG in getpid gettid getuid getgid getrusage ; do
 
 for SUFFIX in "" "_linked" ; do
 
-test_start "$0: verify $PROG match (baseline)"
+# only have _linked variant for gettid
+if [ $PROG == "gettid" ]; then
+	if [[ -z "$SUFFIX" ]]; then
+		continue
+	fi
+else
+	test_start "$0: verify $PROG match (baseline)"
 
-test_run_cmd_local "./${PROG} 1 $MODE" true
+	test_run_cmd_local "./${PROG} 1 $MODE" true
 
-test_pass
+	test_pass
 
-COUNT=1000
+	COUNT=1000
 
-test_start "$0: verify $COUNT $PROG matches (baseline) $MODE"
+	test_start "$0: verify $COUNT $PROG matches (baseline) $MODE"
 
-test_run_cmd_local "./${PROG} $COUNT $MODE" true
+	test_run_cmd_local "./${PROG} $COUNT $MODE" true
 
-test_pass
-
+	test_pass
+fi
 if [[ -z "$SUFFIX" ]]; then
 	PL="BYSYSCALL_LOG=info $BYSYSCALL_LD_PRELOAD"
 else

@@ -36,7 +36,7 @@ PROGS = getpid \
 
 WRAPS = $(PROGS:%=-Wl,--wrap=%)
 
-PROGSLINKED = $(PROGS:%=%_linked)
+PROGSLINKED = $(PROGS:%=%_linked) gettid_linked
 
 INSTALLFILES = $(DEFAULT_TESTS:%=%.sh) $(LIBS)
 
