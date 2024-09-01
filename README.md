@@ -264,6 +264,10 @@ Tests can be run via
 
 ...either at the toplevel, or in the `test/` subdirectory.
 
+# Future work
+
+Better handling of more clone() variants; we may need to re-mmap in some cases.
+
 # Security
 
 Please consult the [security guide](./SECURITY.md) for our responsible security vulnerability disclosure process

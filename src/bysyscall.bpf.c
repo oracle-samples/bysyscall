@@ -196,6 +196,23 @@ int BPF_URETPROBE(bysyscall_fork_return, pid_t ret)
 	return 0;
 }
 
+#ifndef CLONE_VM
+#define CLONE_VM	0x00000100
+#endif
+#ifndef CLONE_FILES
+#define CLONE_FILES	0x00000400
+#endif
+
+SEC("uprobe/libc.so.6:clone")
+int BPF_UPROBE(bysyscall_clone, void *fn, void *child_stack, int flags, void *arg)
+{
+	/* if we clone memory + files, we still have valid mmap() */
+	if ((flags & (CLONE_VM | CLONE_FILES)) == (CLONE_VM | CLONE_FILES))
+		return 0;
+	/* TBD handle clone variants */
+	return 0;
+}
+
 /* Catch explicit library cleanup to free bysyscall array index for re-use */
 SEC("uprobe/libbysyscall.so:__bysyscall_fini")
 int BPF_UPROBE(bysyscall_fini, int pertask_idx)

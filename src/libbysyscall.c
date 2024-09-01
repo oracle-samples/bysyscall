@@ -97,7 +97,7 @@ void __attribute__ ((constructor)) bysyscall_init(void)
 	for (i = 0; i < BYSYSCALL_CNT; i++) {
 		bysyscall_real_fns[i] = dlsym(RTLD_NEXT, bysyscall_names[i]);
 		if (!bysyscall_real_fns[i]) {
-			bysyscall_log(LOG_ERR, "could not link '%s'\n",
+			bysyscall_log(LOG_INFO, "could not link '%s'\n",
 				      bysyscall_names[i]);
 		} else {
 			bysyscall_log(LOG_DEBUG, "linked '%s'(%d) to %p\n",
