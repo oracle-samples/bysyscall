@@ -1,6 +1,4 @@
-*Detailed instructions on how to contribute to the project, if applicable. Must include section about Oracle Contributor Agreement with link and instructions*
-
-# Contributing to this repository
+# Contributing to bysyscall
 
 We welcome your contributions! There are multiple ways to contribute.
 
@@ -55,3 +53,21 @@ like more specific guidelines, see the [Contributor Covenant Code of Conduct][CO
 
 [OCA]: https://oca.opensource.oracle.com
 [COC]: https://www.contributor-covenant.org/version/1/4/code-of-conduct/
+
+## Technical guide to contribution
+
+The architecture used is
+
+- a core program, src/bysyscall.c that loads src/bysyscall.bpf.c
+  BPF programs and pins them to /sys/fs/bpf/bysyscall.
+- a library, libbysyscall which provides override functions for system
+  call wrappers like getpid etc.
+
+Adding a new wrapper involves adding it to `FNS()` list in src/libbysyscall.c
+and adding the function itself to src/libbysyscall.c.  As well as adding
+the `function()`, add `__wrap_function()` since the latter is needed
+for dynamic linking; `__wrap_function()` should simply call `function()`.
+
+Also add tests to tests/ to check your syscall wrapper override works and
+matches the results from the syscall itself, and verify no regressions
+are introduced.

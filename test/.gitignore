@@ -1,0 +1,5 @@
+getuid
+getpid
+getgid
+getrusage
+*_linked
