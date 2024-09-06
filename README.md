@@ -22,7 +22,7 @@ case of getpid()) without making a system call.
 a new process, starting a new pthread or entering a pid namespace, and
 update cache values in response to such events.
 
-# bysyscall design
+## bysyscall design
 
 With this approach in mind, we can create
 
@@ -87,7 +87,7 @@ perthread array index <========================== BPF programs write per-thread
 						  such tasks
 ```
 
-# Why is this needed?
+## Why is this needed?
 
 With the approach of using an `LD_PRELOAD` library, a reasonable question
 is why use BPF at all? We could just cache the relevant values like
@@ -104,7 +104,7 @@ Finally we see in the `pthread_create()` case that BPF instrumentation
 allows us to catch thread creation and prepare our cached data
 ahead of thread execution.
 
-# Getting started
+## Getting started
 
 If building the repository manually, simply run
 
@@ -124,7 +124,7 @@ From the kernel side, BPF trampoline (fentry/fexit) needs to be
 supported along with kernel BTF; check for presence of
 `/sys/kernel/btf/vmlinux`.
 
-# bysyscall usage
+## bysyscall usage
 
 To use bysyscall it will then be a matter of using the LD_PRELOAD approach
 to launch your program (once the bysyscall service has been started)
@@ -152,7 +152,7 @@ $ cc -o myprog myprog.c -lbysyscall -Wl,--wrap=getpid
 Additional ovverrides should be added with more `-Wl,--wrap=<function>'
 options.
 
-# Supported syscall wrapper functions
+## Supported syscall wrapper functions
 
 Per-task bysyscall wrappers are provided for
 
@@ -165,7 +165,7 @@ Per-task bysyscall wrappers are provided for
 Note that many libcs do not have a gettid() syscall wrapper, so in that
 case there is nothing to override.
 
-# Example usage
+## Example usage
 
 `getpid` is a simple program that calls getpid the specified number of times,
 then compares the result to the raw syscall to ensure it was right each time.
@@ -254,7 +254,7 @@ getgid: bypassed 1 times
 $
 ```
 
-# Testing
+## Testing
 
 Tests can be run via
 
@@ -264,15 +264,19 @@ Tests can be run via
 
 ...either at the toplevel, or in the `test/` subdirectory.
 
-# Future work
+## Future work
 
 Better handling of more clone() variants; we may need to re-mmap in some cases.
 
-# Security
+## Contributing
+
+This project welcomes contributions from the community. Before submitting a pull request, please [review our contribution guide](./CONTRIBUTING.md)
+
+## Security
 
 Please consult the [security guide](./SECURITY.md) for our responsible security vulnerability disclosure process
 
-# License
+## License
 
 Copyright (c) 2024 Oracle and/or its affiliates.
 
@@ -286,7 +290,7 @@ SPDX-URL: https://spdx.org/licenses/GPL-2.0.html
 
 See [the license file](./LICENSE.txt) for more details.
 
-# References
+## References
 
 - [1] https://bugzilla.redhat.com/show_bug.cgi?id=1443976
 - [2] https://bugzilla.redhat.com/show_bug.cgi?id=1469670
