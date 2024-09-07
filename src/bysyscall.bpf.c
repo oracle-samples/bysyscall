@@ -125,7 +125,7 @@ static __always_inline int do_bysyscall_fini(void)
 		return 0;
 	pid = task->pid;
 	idxval = bpf_map_lookup_elem(&bysyscall_pertask_idx_hash, &pid);
-	if (!idxval || bysyscall_idx_in_use(idxval))
+	if (!idxval || !bysyscall_idx_in_use(idxval))
 		return 0;
 	idxval->flags &= ~BYSYSCALL_IDX_IN_USE;
 	return 0;
