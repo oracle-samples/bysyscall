@@ -106,6 +106,10 @@ ahead of thread execution.
 
 ## Getting started
 
+You can watch an eBPF summit presentation descibing bysyscall here:
+
+https://youtu.be/DdhGhvYr9sA?si=bOdqOK70sJmiEE6v
+
 If building the repository manually, simply run
 
 ```
