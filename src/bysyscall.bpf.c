@@ -23,6 +23,14 @@
 #include <bpf/bpf_tracing.h>
 #include <bpf/bpf_core_read.h>
 
+#ifndef BPF_UPROBE
+#define BPF_UPROBE BPF_KPROBE
+#endif
+
+#ifndef BPF_URETPROBE
+#define BPF_URETPROBE BPF_KRETPROBE
+#endif
+
 #define NANOSEC 1000000000L
 
 #define printk	__bpf_printk
