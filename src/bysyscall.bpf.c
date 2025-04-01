@@ -292,27 +292,59 @@ int BPF_PROG(bysyscall_setgid, gid_t gid, long ret)
 #define update_rusage_cval(idx, field, val) \
 	__sync_val_compare_and_swap(&bysyscall_pertask_data[idx].rusage[_RUSAGE_CHILDREN].field, 0, val)
 
-static __s64 read_mm_stat(struct mm_struct *mm, int idx)
+struct task_rss_stat___local {
+	int count[NR_MM_COUNTERS];
+} __attribute__((preserve_access_index));
+
+struct mm_rss_stat__local {
+	atomic_long_t count[NR_MM_COUNTERS];
+} __attribute__((preserve_access_index));
+
+struct task_struct___local {
+	struct task_rss_stat___local rss_stat;
+} __attribute__((preserve_access_index));
+
+struct percpu_counter___local {
+	s64 count;
+} __attribute__((preserve_access_index));
+
+struct mm_struct___local {
+	struct percpu_counter___local rss_stat[4];
+} __attribute__((preserve_access_index));
+	
+static __always_inline __u64 read_mm_stat(struct task_struct *task, struct mm_struct *mm, __u8 idx)
 {
-	return mm->rss_stat[idx & (NR_MM_COUNTERS - 1)].count;
+	struct task_struct___local *t = (struct task_struct___local *)task;
+	struct mm_struct___local *m = (struct mm_struct___local *)mm;
+
+	if (bpf_core_type_exists(struct task_rss_stat)) {
+		if (t)
+			return (__u64)t->rss_stat.count[(idx & (NR_MM_COUNTERS - 1))];
+	} else if (bpf_core_field_exists(m->rss_stat)) {
+		struct percpu_counter___local *p;
+
+		p = ((void *)m->rss_stat) + (bpf_core_type_size(*p) * idx);
+		return p->count;
+	}
+	return 0;
 }
 
-static inline __u64 get_mm_maxrss(struct task_struct *task)
+static __always_inline __u64 get_mm_maxrss(struct task_struct *task)
 {
 	struct mm_struct *mm = task->mm;
 	__u64 mm_tot = 0;
 
 	if (!mm)
 		return 0;
-	mm_tot = read_mm_stat(mm, MM_FILEPAGES);
-	mm_tot += read_mm_stat(mm, MM_ANONPAGES);
-	mm_tot += read_mm_stat(mm, MM_SHMEMPAGES);
+	mm_tot = read_mm_stat(task, mm, MM_FILEPAGES);
+	mm_tot += read_mm_stat(task, mm, MM_ANONPAGES);
+	mm_tot += read_mm_stat(task, mm, MM_SHMEMPAGES);
 	if (mm_tot > mm->hiwater_rss)
 		return mm_tot;
 	return mm->hiwater_rss;
 }
 
-static inline __u64 get_maxrss(__u64 maxrss, __u64 mm_maxrss)
+static __always_inline __u64 get_maxrss(__u64 maxrss, __u64 mm_maxrss)
 {
 	if (mm_maxrss > maxrss)
 		maxrss = mm_maxrss;
