@@ -22,7 +22,6 @@ SRCARCH := $(shell uname -m | sed -e s/i.86/x86/ -e s/x86_64/x86/ \
                                   -e s/aarch64.*/arm64/ )
 CLANG ?= clang
 LLC ?= llc
-LLVM_STRIP ?= llvm-strip
 BPFTOOL ?= bpftool
 BPF_INCLUDE := /usr/local/include
 INCLUDES := -I. -I$(BPF_INCLUDE) -I../include/uapi
@@ -108,8 +107,7 @@ $(LIB): $(LIB).c $(LIB).o $(PROG).skel.h
 
 $(PROG).bpf.o: $(PROG).bpf.c vmlinux.h
 	$(QUIET_GEN)$(CLANG) -g -D__TARGET_ARCH_$(SRCARCH) -O2 -target bpf \
-		$(INCLUDES) -c $(PROG).bpf.c -o $@ &&                   \
-	$(LLVM_STRIP) -g $@
+		$(INCLUDES) -c $(PROG).bpf.c -o $@
 
 %.o: %.c
 	$(QUIET_CC)$(CC) $(CFLAGS) $(INCLUDES) -c $(filter %.c,$^) -o $@
