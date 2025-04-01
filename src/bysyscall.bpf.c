@@ -146,8 +146,7 @@ static __always_inline int do_bysyscall_fini(void)
  * which bysyscall set by computing the difference between pthread_self
  * and the first __thread variable addresses.
  */
-SEC("uprobe/libpthread.so:start_thread")
-int BPF_UPROBE(bysyscall_start_thread, void *arg)
+static __always_inline int __bysyscall_start_thread(void *arg)
 {
 	struct task_struct *task;
 	struct bysyscall_idx_data *idxval;
@@ -173,6 +172,18 @@ int BPF_UPROBE(bysyscall_start_thread, void *arg)
 	/* this task has multiple threads */
 	__sync_fetch_and_add(&bysyscall_pertask_data[idx].child_threads, 1);
 	return 0;
+}
+
+SEC("uprobe/libc.so.6:start_thread")
+int BPF_UPROBE(cbysyscall_start_thread, void *arg)
+{
+	return __bysyscall_start_thread(arg);
+}
+
+SEC("uprobe/libpthread.so:start_thread")
+int BPF_UPROBE(pbysyscall_start_thread, void *arg)
+{
+	return __bysyscall_start_thread(arg);
 }
 
 /* Assign a new index, cached data on fork() success, update the index in

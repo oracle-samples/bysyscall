@@ -62,8 +62,14 @@ __thread int perthread_data;
 
 int main(int argc, char *argv[])
 {
+	char *optional_prog_name = "cbysyscall_start_thread";
+	char *required_prog_name = "pbysyscall_start_thread";
+	char *tmp_prog_name = NULL;
+	struct bpf_program **progs;
+	struct bpf_program *prog;
 	int map_dir_fd, err = 0;
 	struct bpf_link **links;
+	bool retrying = false;
 	unsigned int i;
 
 	cleanup(0);
@@ -77,6 +83,7 @@ int main(int argc, char *argv[])
 
 	signal(SIGINT, cleanup);
 
+retry:
 	skel = bysyscall_bpf__open();
 	if (!skel)
 		return -1;
@@ -86,6 +93,13 @@ int main(int argc, char *argv[])
 						      (long)pthread_self();
 
 	skel->data->bysyscall_page_size = getpagesize();
+
+	prog = bpf_object__find_program_by_name(skel->obj, optional_prog_name);
+	if (prog)
+		bpf_program__set_autoload(prog, false);
+	prog = bpf_object__find_program_by_name(skel->obj, required_prog_name);
+	if (prog)
+		bpf_program__set_autoload(prog, true);
 	err = bysyscall_bpf__load(skel);
 	if (err) {
 		fprintf(stderr, "could not load bysyscall object: %d\n", err);
@@ -102,29 +116,48 @@ int main(int argc, char *argv[])
 		}
 	}
 	err = bysyscall_bpf__attach(skel);
+	if (err && !retrying) {
+		bysyscall_bpf__destroy(skel);
+		skel = NULL;
+		tmp_prog_name = optional_prog_name;
+                optional_prog_name = required_prog_name;
+                required_prog_name = tmp_prog_name;
+                retrying = true;
+                goto retry;
+        }
 	if (err) {
 		fprintf(stderr, "could not attach bysyscall progs: %d\n",
 			err);
 		goto done;
 	}
 	err = bpf_object__pin_maps(skel->obj, BYSYSCALL_PINDIR);
-	if (!err)
-		err = bpf_object__pin_programs(skel->obj, BYSYSCALL_PINDIR);
 	if (err) {
 		fprintf(stderr, "could not pin bsyscall progs/maps to '%s': %s\n",
 			BYSYSCALL_PINDIR, strerror(errno));
 		err = 1;
 		goto done;
 	}
+	progs = (struct bpf_program **)&skel->progs;
 	links = (struct bpf_link **)&skel->links;
 	for (i = 0; i < sizeof(skel->links)/sizeof(struct bpf_link *); i++) {
-		char linkname[PATH_MAX];
+		const char *prog_name = bpf_program__name(progs[i]);
+		char pinname[PATH_MAX];
 
-		snprintf(linkname, sizeof(linkname), BYSYSCALL_PINDIR "link%d", i);
-		err = bpf_link__pin(links[i], linkname);
+		if (strcmp(prog_name, optional_prog_name) == 0)
+			continue;
+		snprintf(pinname, sizeof(pinname), BYSYSCALL_PINDIR "prog%d", i);
+		err = bpf_program__pin(progs[i], pinname);
+		if (err) {
+			fprintf(stderr, "could not pin bysyscall prog to '%s': %s\n",
+				pinname, strerror(errno));
+			err = 1;
+			goto done;
+		}
+		snprintf(pinname, sizeof(pinname), BYSYSCALL_PINDIR "link%d", i);
+		err = bpf_link__pin(links[i], pinname);
 		if (err) {
 			fprintf(stderr, "could not pin bysyscall link to '%s': %s\n",
-				linkname, strerror(errno));
+				pinname, strerror(errno));
 			err = 1;
 			goto done;
 		}
